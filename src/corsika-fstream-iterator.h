@@ -5,11 +5,10 @@
 #include <vector>
 
 #include "corsika-fstream.h"
+#include "corsika-subblock.h"
 
 namespace corsika {
   
-  using subblock = std::vector<word_t>;
-
   class fstream::iterator {
   private:
     fstream* m_stream;

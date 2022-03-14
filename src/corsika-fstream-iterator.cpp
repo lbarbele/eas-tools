@@ -2,6 +2,7 @@
 
 #include "corsika-fstream.h"
 #include "corsika-fstream-iterator.h"
+#include "corsika-subblock.h"
 
 namespace corsika {
 

@@ -4,7 +4,8 @@ sources = [
   'src/main.cpp',
   'src/corsika-word_t.cpp',
   'src/corsika-fstream.cpp',
-  'src/corsika-fstream-iterator.cpp'
+  'src/corsika-fstream-iterator.cpp',
+  'src/corsika-subblock.cpp'
 ]
 
 includes = include_directories('src')
