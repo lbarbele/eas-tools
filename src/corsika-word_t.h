@@ -7,27 +7,30 @@
 
 namespace corsika {
 
-class word_t {
-private:
-  char32_t data;
+  class word_t {
+  private:
+    char32_t data;
 
-public:
-  explicit constexpr word_t(const char32_t c = 0) : data(c) {};
+  public:
+    explicit constexpr word_t(const char32_t c = 0) : data(c) {};
 
-  template<class T, std::enable_if_t<sizeof(T)==sizeof(data),bool> = true>
-  constexpr T& as()
-  {return reinterpret_cast<T&>(data);}
+    template<class T, std::enable_if_t<sizeof(T)==sizeof(data),bool> = true>
+    constexpr T& as()
+    {return reinterpret_cast<T&>(data);}
 
-  template<class T, std::enable_if_t<sizeof(T)==sizeof(data),bool> = true>
-  constexpr const T& as() const
-  {return reinterpret_cast<const T&>(data);}
+    template<class T, std::enable_if_t<sizeof(T)==sizeof(data),bool> = true>
+    constexpr const T& as() const
+    {return reinterpret_cast<const T&>(data);}
 
-  constexpr bool operator==(const word_t& other) const
-  {return data == other.data;}
-};
+    constexpr bool operator==(const word_t& other) const
+    {return data == other.data;}
 
-using word_traits = std::char_traits<word_t>;
-using word_codecvt = std::codecvt<corsika::word_t, char, std::mbstate_t>;
+    std::string_view str() const
+    {return std::string_view(reinterpret_cast<const char*>(this), sizeof(*this));}
+  };
+
+  using word_traits = std::char_traits<word_t>;
+  using word_codecvt = std::codecvt<corsika::word_t, char, std::mbstate_t>;
 
 } // namespace corsika
 
