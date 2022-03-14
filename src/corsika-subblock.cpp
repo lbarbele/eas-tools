@@ -10,7 +10,7 @@ namespace corsika {
       return type::empty;
     }
 
-    auto title = at(0).str();
+    auto title = at<word_t>(0).str();
 
     if (title == "RUNH") {
       return type::run_header;

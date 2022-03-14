@@ -22,6 +22,20 @@ namespace corsika {
   private:
   public:
     type get_type() const;
+
+    float& operator[](size_type pos)
+    {return std::vector<word_t>::at(pos).as<float>();}
+
+    const float& operator[](size_type pos) const
+    {return std::vector<word_t>::at(pos).as<float>();}
+
+    template<typename T = float>
+    T& at(size_type pos)
+    {return std::vector<word_t>::at(pos).as<T>();}
+
+    template<typename T = float>
+    const T& at(size_type pos) const
+    {return std::vector<word_t>::at(pos).as<T>();}
   };
 
 } // namespace corsika
