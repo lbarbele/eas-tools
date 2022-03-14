@@ -1,6 +1,15 @@
+#include <string>
+
 #include "corsika-subblock.h"
 
 namespace corsika {
+
+  std::string_view
+  subblock::get_title()
+  const
+  {
+    return at<word_t>(0).str();
+  }
 
   subblock::type
   subblock::get_type()
@@ -10,7 +19,7 @@ namespace corsika {
       return type::empty;
     }
 
-    auto title = at<word_t>(0).str();
+    auto title = get_title();
 
     if (title == "RUNH") {
       return type::run_header;

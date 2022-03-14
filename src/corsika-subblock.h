@@ -2,6 +2,7 @@
 #define _corsika_subblock_h
 
 #include <vector>
+#include <string>
 
 #include "corsika-word_t.h"
 
@@ -21,6 +22,7 @@ namespace corsika {
 
   private:
   public:
+    std::string_view get_title() const;
     type get_type() const;
 
     float& operator[](size_type pos)
