@@ -21,6 +21,14 @@ namespace corsika {
     void open(const char* fname, ios_base::openmode mode = ios_base::in);
     void open(const std::string& fname, ios_base::openmode mode = ios_base::in);
     void open(const std::filesystem::path& fname, ios_base::openmode mode = ios_base::in);
+
+    template<typename T = word_t>
+    T get()
+    {
+      word_t word;
+      std::basic_fstream<word_t>::get(word);
+      return word.as<T>();
+    }
   };
 
   // declare operators
