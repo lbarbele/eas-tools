@@ -1,7 +1,8 @@
 project('eas-sim-readers', 'cpp')
 
 sources = [
-  'src/main.cpp'
+  'src/main.cpp',
+  'src/corsika-word_t.cpp'
 ]
 
 includes = include_directories('src')
