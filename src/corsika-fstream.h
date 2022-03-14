@@ -36,7 +36,7 @@ namespace corsika {
     }
   };
 
-  // declare operators
+  // word insertion/extraction operators
   std::basic_istream<word_t>&
   operator>>(std::basic_istream<word_t>& stream, word_t& word);
 

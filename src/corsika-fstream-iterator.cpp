@@ -6,7 +6,8 @@
 namespace corsika {
 
   fstream::iterator::iterator()
-  : m_stream(nullptr)
+  : m_stream(nullptr),
+    m_pos(-1)
   {}
 
   fstream::iterator::iterator(
@@ -15,14 +16,14 @@ namespace corsika {
     m_stream(&stream)
   {
     stream.seekg(0);
-    auto block_size = stream.get<int32_t>();
-    switch (block_size)
+
+    switch (stream.get<int32_t>())
     {
     case 22932:
-      m_subblock_size = block_size / (4 * 21);
+      m_subblock_size = 273;
       break;
     case 26208:
-      m_subblock_size = block_size / (4 * 21);
+      m_subblock_size = 312;
       break;
     default:
       throw;
@@ -31,6 +32,12 @@ namespace corsika {
     m_pos = 0;
     m_data.resize(m_subblock_size);
     stream.read(m_data.data(), m_subblock_size);
+
+    if (!m_stream->good() || m_stream->gcount() != m_subblock_size) {
+      m_data.clear();
+      m_stream = nullptr;
+      m_pos = -1;
+    }
   }
 
   long
@@ -62,7 +69,6 @@ namespace corsika {
     }
 
     if (m_stream->good()) {
-      m_data.resize(m_subblock_size);
       m_stream->read(m_data.data(), m_subblock_size);
     }
 
