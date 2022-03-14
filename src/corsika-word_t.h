@@ -154,11 +154,11 @@ struct std::char_traits<corsika::word_t> {
 
   static constexpr char_type
   to_char_type(const int_type& i)
-  {return corsika::word_t(static_cast<char32_t>(i));}
+  {return corsika::word_t(std::char_traits<char32_t>::to_char_type(i));}
 
   static constexpr int_type
   to_int_type(const char_type& w)
-  {return int_type(w.as<char32_t>());}
+  {return std::char_traits<char32_t>::to_int_type(w.as<char32_t>());}
 
   static constexpr bool
   eq_int_type(const int_type& i1, const int_type& i2)
@@ -166,11 +166,11 @@ struct std::char_traits<corsika::word_t> {
 
   static constexpr int_type
   eof()
-  {return char_traits<char32_t>::eof();}
+  {return std::char_traits<char32_t>::eof();}
 
   static constexpr int_type
   not_eof(const int_type& i)
-  {return char_traits<char32_t>::not_eof(i);}
+  {return std::char_traits<char32_t>::not_eof(i);}
 };
 
 

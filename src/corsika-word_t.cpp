@@ -5,6 +5,11 @@
 #include <string>
 
 //
+// impose the size of word_t to be of 4 bytes
+//
+static_assert(sizeof(corsika::word_t) == 4);
+
+//
 // definition of non-constexpr methods of std::char_traits<corsika::word_t>
 //
 std::char_traits<corsika::word_t>::char_type*
@@ -15,7 +20,7 @@ std::char_traits<corsika::word_t>::move(
 )
 {
   return reinterpret_cast<corsika::word_t*>(
-    char_traits<char32_t>::move(
+    std::char_traits<char32_t>::move(
       reinterpret_cast<char32_t*>(s1),
       reinterpret_cast<const char32_t*>(s2),
       n
@@ -31,7 +36,7 @@ std::char_traits<corsika::word_t>::copy(
 )
 {
   return reinterpret_cast<corsika::word_t*>(
-    char_traits<char32_t>::copy(
+    std::char_traits<char32_t>::copy(
       reinterpret_cast<char32_t*>(s1),
       reinterpret_cast<const char32_t*>(s2),
       n
@@ -67,9 +72,10 @@ corsika::word_codecvt::do_in(
   intern_type*& to_next
 ) const
 {
+  long char_size = sizeof(corsika::word_t);
   auto first = reinterpret_cast<const intern_type*>(from);
-  auto last = first + min((from_end-from)/4, to_end-to);
-  to_next = copy(first, last, to);
+  auto last = first + std::min((from_end-from)/char_size, to_end-to);
+  to_next = std::copy(first, last, to);
   from_next = reinterpret_cast<const extern_type*>(last);
   return (from_next == from_end) ? ok : partial;
 }
@@ -86,9 +92,10 @@ corsika::word_codecvt::do_out(
   extern_type*& to_next
 ) const
 {
+  long char_size = sizeof(corsika::word_t);
   auto first = reinterpret_cast<const extern_type*>(from);
-  auto last = first + 4*min(from_end-from, (to_end-to)/4);
-  to_next = copy(first, last, to);
+  auto last = first + char_size*std::min(from_end-from, (to_end-to)/char_size);
+  to_next = std::copy(first, last, to);
   from_next = reinterpret_cast<const intern_type*>(last);
   return (from_next == from_end) ? ok : partial;
 }
