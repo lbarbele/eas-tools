@@ -1,4 +1,5 @@
 #include "corsika-fstream.h"
+#include "corsika-fstream-iterator.h"
 
 namespace corsika {
 
@@ -65,6 +66,19 @@ namespace corsika {
   )
   {
     std::basic_fstream<word_t>::open(fname, mode|ios_base::binary);
+  }
+
+  // begin/end iterators
+  fstream::iterator
+  fstream::begin()
+  {
+    return fstream::iterator(*this);
+  }
+
+  fstream::iterator
+  fstream::end()
+  {
+    return fstream::iterator();
   }
 
   // insertion/extraction operators

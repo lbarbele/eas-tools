@@ -13,6 +13,8 @@ namespace corsika {
   class fstream : public std::basic_fstream<word_t> {
   private:
   public:
+    class iterator;
+
     fstream();
     fstream(const char* fname, ios_base::openmode mode = ios_base::in);
     fstream(const std::string& fname, ios_base::openmode mode = ios_base::in);
@@ -21,6 +23,9 @@ namespace corsika {
     void open(const char* fname, ios_base::openmode mode = ios_base::in);
     void open(const std::string& fname, ios_base::openmode mode = ios_base::in);
     void open(const std::filesystem::path& fname, ios_base::openmode mode = ios_base::in);
+
+    iterator begin();
+    iterator end();
 
     template<typename T = word_t>
     T get()
