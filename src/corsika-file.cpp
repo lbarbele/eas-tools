@@ -23,13 +23,11 @@ namespace corsika {
         m_end = *it;
         break;
       case subblock::type::event_header:
-        std::cout << "found event header at " << it.get_pos() << std::endl;
-        break;
+        m_showers.emplace_back(it);
+        return;
       case subblock::type::event_end:
-        std::cout << "found event end at " << it.get_pos() << std::endl;
         break;
       case subblock::type::longitudinal:
-       std::cout << "found longitudinal block at " << it.get_pos() << std::endl;
         break;
       case subblock::type::data:
         break;
