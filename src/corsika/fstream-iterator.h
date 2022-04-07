@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include "corsika-fstream.h"
-#include "corsika-subblock.h"
+#include "fstream.h"
+#include "subblock.h"
 
 namespace corsika {
   

@@ -1,6 +1,6 @@
 #include <string>
 
-#include "corsika-subblock.h"
+#include "subblock.h"
 
 namespace corsika {
 

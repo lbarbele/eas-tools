@@ -1,6 +1,6 @@
 
-#include "corsika-shower.h"
-#include "corsika-fstream-iterator.h"
+#include "shower.h"
+#include "fstream-iterator.h"
 
 namespace corsika {
 

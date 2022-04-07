@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include "corsika-fstream.h"
-#include "corsika-fstream-iterator.h"
-#include "corsika-subblock.h"
+#include "fstream.h"
+#include "fstream-iterator.h"
+#include "subblock.h"
 
 namespace corsika {
 

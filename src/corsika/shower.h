@@ -1,8 +1,8 @@
 #ifndef _corsika_shower_h
 #define _corsika_shower_h
 
-#include "corsika-subblock.h"
-#include "corsika-fstream-iterator.h"
+#include "subblock.h"
+#include "fstream-iterator.h"
 
 namespace corsika {
 
