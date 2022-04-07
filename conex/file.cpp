@@ -1,8 +1,8 @@
 #include <string>
 #include <iostream>
 
-#include "conex-file.h"
-#include "conex-shower.h"
+#include "file.h"
+#include "shower.h"
 
 namespace conex {
 
@@ -22,9 +22,9 @@ namespace conex {
     m_shower_tree.reset(Get<TTree>("Shower"));
 
     if (!m_header_tree || !m_shower_tree) {
-      Close();
       m_header_tree.reset(nullptr);
       m_shower_tree.reset(nullptr);
+      Close();
       return;
     }
 

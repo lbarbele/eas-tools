@@ -8,12 +8,14 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include "conex-header.h"
-#include "conex-shower.h"
+#include "header.h"
+#include "shower.h"
 
 namespace conex {
 
   class file : private TFile {
+  // TODO: add support to the leading interactions tree
+  // TODO: add a shower iterator, so that range-based for loops can be used
   private:
 
     std::unique_ptr<TTree> m_header_tree;
