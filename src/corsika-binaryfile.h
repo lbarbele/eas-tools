@@ -11,7 +11,7 @@
 
 namespace corsika {
 
-  class file {
+  class binaryfile {
   private:
     std::shared_ptr<fstream> m_stream;
     subblock m_header;
@@ -19,7 +19,7 @@ namespace corsika {
     std::vector<shower> m_showers;
 
   public:
-    file(const std::string& fname);
+    binaryfile(const std::string& fname);
 
     const subblock& get_header() const
     {return m_header;}

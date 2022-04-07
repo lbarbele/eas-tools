@@ -2,13 +2,13 @@
 #include <memory>
 #include <iostream>
 
-#include "corsika-file.h"
+#include "corsika-binaryfile.h"
 #include "corsika-fstream.h"
 #include "corsika-fstream-iterator.h"
 
 namespace corsika {
 
-  file::file(
+  binaryfile::binaryfile(
     const std::string& fname
   ) :
     m_stream(std::make_unique<fstream>(fname, std::ios::in))
