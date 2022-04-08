@@ -13,8 +13,13 @@ namespace corsika {
     particle();
     particle(const float* data);
 
+    float&
+    operator[](const unsigned int pos)
+    {return m_data[pos];}
+
     const float&
     operator[](const unsigned int pos)
+    const
     {return m_data[pos];}
   };
 
