@@ -21,7 +21,7 @@ namespace corsika {
         m_header = *it;
         continue;
       case subblock::type::run_end:
-        m_end = *it;
+        m_trailer = *it;
         return;
       case subblock::type::event_header:
         m_showers.emplace_back(m_stream, it);

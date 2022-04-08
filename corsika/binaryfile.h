@@ -15,7 +15,7 @@ namespace corsika {
   private:
     std::shared_ptr<fstream> m_stream;
     subblock m_header;
-    subblock m_end;
+    subblock m_trailer;
     std::vector<shower> m_showers;
 
   public:
@@ -25,7 +25,7 @@ namespace corsika {
     {return m_header;}
 
     const subblock& get_trailer() const
-    {return m_end;}
+    {return m_trailer;}
 
     // TODO: add support to reverse iterators
     auto begin(){return m_showers.begin();}

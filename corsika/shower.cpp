@@ -11,7 +11,7 @@ namespace corsika {
     fstream::iterator& it
   ) :
     m_stream(stream),
-    m_begin(it)
+    m_header(it)
   {
     // check if iterator is actually poiting to the event header block
     if (it->get_type() != subblock::type::event_header) {
@@ -27,7 +27,7 @@ namespace corsika {
 
     // ensure we got an event end block
     if (it->get_type() == subblock::type::event_end) {
-      m_end = it;
+      m_trailer = it;
     } else {
       std::cerr << "corsika::shower::shower(): unable to find event trailer block!" << std::endl;
       throw;
