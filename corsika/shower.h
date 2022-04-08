@@ -8,12 +8,17 @@ namespace corsika {
 
   class shower {
   private:
+    std::shared_ptr<fstream> m_stream;
     fstream::iterator m_begin;
+    fstream::iterator m_end;
   public:
-    shower(const fstream::iterator& it);
+    shower(const std::shared_ptr<fstream>& stream, fstream::iterator& it);
 
-    const subblock& get_header()
+    const subblock& get_header() const
     {return *m_begin;}
+
+    const subblock& get_trailer() const
+    {return *m_end;}
   };
 
 } // namespace corsika
