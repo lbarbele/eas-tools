@@ -64,6 +64,15 @@ namespace corsika {
         // here we got a good stream, so read the next particle
         m_particle = particle(&m_subblock_it->as<float>());
         m_subblock_it += 8;
+        
+        // if particle fields are all zero, there is no more particles
+        for (int i = 0; i < 8; ++i) {
+          if (m_particle[i] != 0) {
+            return *this;
+          }
+        }
+
+        *this = particle_iterator();
       }
 
       return *this;
