@@ -13,6 +13,7 @@ namespace corsika {
   private:
     fstream* m_stream;
     subblock m_data;
+    long m_block_size;
     long m_subblock_size;
     long m_pos;
 

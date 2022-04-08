@@ -22,9 +22,11 @@ namespace corsika {
     {
     case 22932:
       m_subblock_size = 273;
+      m_block_size = 22932/sizeof(fstream::char_type);
       break;
     case 26208:
       m_subblock_size = 312;
+      m_block_size = 26208/sizeof(fstream::char_type) + 2;
       break;
     default:
       throw;
@@ -65,14 +67,26 @@ namespace corsika {
   fstream::iterator&
   fstream::iterator::operator++()
   {
-    if ((++m_pos)%21 == 0) {
-      m_stream->ignore(2);
+    ++m_pos;
+
+    // position the stream should be
+    const long pos_it = (m_pos/21)*m_block_size + 1 + (m_pos%21)*m_subblock_size;
+    // position the stream actually is
+    const long pos_str = m_stream->tellg()/sizeof(fstream::char_type);
+
+    // reposition the stream if necessary
+    if (pos_it != pos_str) {
+      m_stream->clear();
+      m_stream->seekg(pos_it, std::ios::beg);
     }
 
+    // only perform the actual reading if the stream is still good
     if (m_stream->good()) {
       m_stream->read(m_data.data(), m_subblock_size);
     }
 
+    // if the stream is not good anymore, let this iterator be the end of
+    // stream iterator
     if (!m_stream->good() || m_stream->gcount() != m_subblock_size) {
       m_data.clear();
       m_stream = nullptr;
