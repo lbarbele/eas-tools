@@ -10,6 +10,7 @@ namespace corsika {
     std::array<float, 8> m_data;
   
   public:
+    particle();
     particle(const float* data);
 
     const float&

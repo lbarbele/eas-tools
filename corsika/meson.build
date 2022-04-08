@@ -4,7 +4,8 @@ corsika_sources = [
   'fstream-iterator.cpp',
   'subblock.cpp',
   'binaryfile.cpp',
-  'shower.cpp' 
+  'shower.cpp',
+  'particle.cpp'
 ]
 
 libcorsika = library(
