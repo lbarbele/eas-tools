@@ -1,0 +1,22 @@
+#ifndef _corsika_particle_h
+#define _corsika_particle_h
+
+#include <array>
+
+namespace corsika {
+
+  class particle {
+  private:
+    std::array<float, 8> m_data;
+  
+  public:
+    particle(const float* data);
+
+    const float&
+    operator[](const unsigned int pos)
+    {return m_data[pos];}
+  };
+
+} // namespace corsika
+
+#endif // _corsika_particle_h
