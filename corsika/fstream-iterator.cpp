@@ -104,6 +104,29 @@ namespace corsika {
     return other;
   }
 
+  fstream::iterator&
+  fstream::iterator::operator+(
+    long offset
+  )
+  {
+    if (offset < 0) {
+      std::cerr << "WARNING: decrement is not supported by corsika::fstream::iterator!" << std::endl;
+      throw;
+    }
+
+    auto end = fstream::iterator();
+
+    while (offset > 0) {
+      if (*this == end) {
+        break;
+      }
+      ++(*this);
+      --offset;
+    }
+
+    return *this;
+  }
+
   bool 
   fstream::iterator::operator==(
     const iterator& other

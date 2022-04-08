@@ -27,6 +27,7 @@ namespace corsika {
     const subblock* operator->() const;
     iterator& operator++();
     iterator operator++(int);
+    iterator& operator+(long offset);
 
     bool operator==(const iterator& other) const;
     bool operator!=(const iterator& other) const;
