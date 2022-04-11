@@ -62,7 +62,7 @@ namespace corsika {
         *this = particle_iterator();
       } else {
         // here we got a good stream, so read the next particle
-        m_particle = particle(&m_subblock_it->as<float>());
+        m_particle = particle(&m_subblock_it->as<float>(), m_stream_it.has_thinning());
         m_subblock_it += 8;
         
         // if particle fields are all zero, there is no more particles

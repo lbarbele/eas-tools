@@ -10,11 +10,15 @@ namespace corsika {
   }
 
   particle::particle(
-    const float* data
+    const float* data,
+    const bool has_thinning
   )
   {
-    for (int i = 0; i < 8; i++) {
-      m_data[i] = data[i];
+    if (has_thinning) {
+      std::copy(data, data+8, m_data.data());
+    } else {
+      std::copy(data, data+7, m_data.data());
+      m_data.back() = 1;
     }
   }
 

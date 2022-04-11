@@ -11,7 +11,7 @@ namespace corsika {
   
   public:
     particle();
-    particle(const float* data);
+    particle(const float* data, const bool has_thinning);
 
     float&
     operator[](const unsigned int pos)
