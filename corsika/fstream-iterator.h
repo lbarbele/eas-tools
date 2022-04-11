@@ -16,12 +16,14 @@ namespace corsika {
     long m_block_size;
     long m_subblock_size;
     long m_pos;
+    bool m_has_thinning;
 
   public:
     iterator();
     iterator(fstream& stream);
 
     long get_pos() const;
+    bool has_thinning() const;
 
     const subblock& operator*() const;
     const subblock* operator->() const;

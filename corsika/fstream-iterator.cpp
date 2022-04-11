@@ -23,10 +23,12 @@ namespace corsika {
     case 22932:
       m_subblock_size = 273;
       m_block_size = 22932/sizeof(fstream::char_type);
+      m_has_thinning = false;
       break;
     case 26208:
       m_subblock_size = 312;
       m_block_size = 26208/sizeof(fstream::char_type) + 2;
+      m_has_thinning = true;
       break;
     default:
       throw;
@@ -48,6 +50,13 @@ namespace corsika {
   const
   {
     return m_pos;
+  }
+
+  bool
+  fstream::iterator::has_thinning()
+  const
+  {
+    return m_has_thinning;
   }
 
   const subblock& 
