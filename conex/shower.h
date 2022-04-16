@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../util/constants.h"
+#include "../util/gaisser_hillas_fit.h"
 
 namespace conex {
 
@@ -50,6 +51,14 @@ namespace conex {
     float  EGround[3];
 
   public:
+    util::gaisser_hillas_fit get_fit() const
+    {
+      util::gaisser_hillas_fit fit(Nmax, X0, Xmax, p1, p2, p3);
+      fit.set_ndof(nX);
+      fit.set_chi2(chi2);
+      return fit;
+    }
+
     // primary energy
     float get_lge() const
     {return lgE;}
