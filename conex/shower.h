@@ -4,9 +4,11 @@
 namespace conex {
 
   struct shower {
+    friend class file;
+
   private:
     static const unsigned int max_entries = 5000;
-  public:
+    
     float  lgE;
     float  zenith;
     float  azimuth;
@@ -41,6 +43,9 @@ namespace conex {
     float  Hadrons[max_entries];
     float  dMu[max_entries];
     float  EGround[3];
+
+  public:
+    
   };
 
 } // namespace conex
