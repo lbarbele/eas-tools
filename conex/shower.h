@@ -2,6 +2,7 @@
 #define _conex_shower_h
 
 #include <cmath>
+#include <vector>
 
 #include "../util/constants.h"
 
@@ -134,7 +135,46 @@ namespace conex {
     int get_nx() const
     {return nX;}
 
+    // actual profiles
+    const float* get_profile_depth() const
+    {return X;}
 
+    const float* get_profile_charged() const
+    {return N;}
+
+    const float* get_profile_height() const
+    {return H;}
+
+    const float* get_profile_distance() const
+    {return D;}
+
+    const float* get_profile_energy_deposity() const
+    {return dEdX;}
+
+    const float* get_profile_muons() const
+    {return Mu;}
+
+    const float* get_profile_photons() const
+    {return Gamma;}
+
+    const float* get_profile_electrons() const
+    {return Electrons;}
+
+    const float* get_profile_hadrons() const
+    {return Hadrons;}
+
+    const float* get_profile_muon_production() const
+    {return dMu;}
+
+    // energy at ground
+    float get_ground_energy_em() const
+    {return EGround[0];}
+
+    float get_ground_energy_hadrons() const
+    {return EGround[1];}
+
+    float get_ground_energy_muons() const
+    {return EGround[2];}
   };
 
 } // namespace conex
