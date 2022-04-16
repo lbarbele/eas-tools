@@ -113,6 +113,23 @@ namespace conex {
     {return gaCut;}
 
     // mean free path arrays
+    const std::array<double, 31>& get_lambda_lge() const 
+    {return lambdaLgE;}
+
+    const std::array<double, 31>& get_lambda_proton() const
+    {return lambdaProton;}
+
+    const std::array<double, 31>& get_lambda_pion() const
+    {return lambdaPion;}
+
+    const std::array<double, 31>& get_lambda_helium() const
+    {return lambdaHelium;}
+
+    const std::array<double, 31>& get_lambda_nitrogen() const
+    {return lambdaNitrogen;}
+
+    const std::array<double, 31>& get_lambda_iron() const
+    {return lambdaIron;}
 
     // extension fields
     bool has_extensions() const
@@ -132,8 +149,6 @@ namespace conex {
 
     double get_f19() const
     {return f19;}
-
-
   };
 
 } // namespace conex
