@@ -1,6 +1,10 @@
 #ifndef _conex_shower_h
 #define _conex_shower_h
 
+#include <cmath>
+
+#include "../util/constants.h"
+
 namespace conex {
 
   struct shower {
@@ -45,33 +49,46 @@ namespace conex {
     float  EGround[3];
 
   public:
+    // primary energy
     float get_lge() const
     {return lgE;}
+    
+    double get_energy_gev() const
+    {return std::pow(10, lgE - 9);}
 
-    float get_zenith() const
+    // zenith/azimuth of shower axis
+    float get_zenith_deg() const
     {return zenith;}
+    double get_zenith_rad() const
+    {return zenith*util::constants::pi/180.;}
 
-    float get_azimuth() const
+    float get_azimuth_deg() const
     {return azimuth;}
+    double get_azimuth_rad() const
+    {return azimuth*util::constants::pi/180.;}
 
+    // random seeds
     int get_seed2() const
     {return Seed2;}
 
     int get_seed3() const
     {return Seed3;}
 
-    float get_first_x() const
+    // data from the first interaction
+    float get_first_interaction_depth() const
     {return Xfirst;}
 
-    float get_first_h() const
+    float get_first_interaction_height() const
     {return Hfirst;}
 
-    float get_first_inel() const
+    float get_first_interaction_inelasticty() const
     {return XfirstIn;}
 
+    // impact parameter
     double get_altitude() const
     {return altitude;}
 
+    // gaisser hillas fit (6 parameters)
     float get_x0() const
     {return X0;}
 
@@ -93,21 +110,27 @@ namespace conex {
     float get_chi2() const
     {return chi2;}
 
+    // real xmax
     float get_xmx() const
     {return Xmx;}
 
+    // real nmax
     float get_nmx() const
     {return Nmx;}
 
+    // real xmax of dEdX profile
     float get_xmx_dedx() const
     {return XmxdEdX;}
 
+    // real max value of dEdX profile
     float get_dedx_mx() const
     {return dEdXmx;}
 
+    // cpu time in seconds
     float get_cpu_time() const
     {return cpuTime;}
 
+    // number of points in the longitudinal profiles
     int get_nx() const
     {return nX;}
 
