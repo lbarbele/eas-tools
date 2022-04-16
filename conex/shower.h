@@ -145,34 +145,34 @@ namespace conex {
     {return nX;}
 
     // actual profiles
-    const float* get_profile_depth() const
+    const float* get_depths() const
     {return X;}
 
-    const float* get_profile_charged() const
+    const float* get_charged() const
     {return N;}
 
-    const float* get_profile_height() const
+    const float* get_heights() const
     {return H;}
 
-    const float* get_profile_distance() const
+    const float* ged_distances() const
     {return D;}
 
-    const float* get_profile_energy_deposity() const
+    const float* get_dedx() const
     {return dEdX;}
 
-    const float* get_profile_muons() const
+    const float* get_muons() const
     {return Mu;}
 
-    const float* get_profile_photons() const
+    const float* get_photons() const
     {return Gamma;}
 
-    const float* get_profile_electrons() const
+    const float* get_electrons() const
     {return Electrons;}
 
-    const float* get_profile_hadrons() const
+    const float* get_hadrons() const
     {return Hadrons;}
 
-    const float* get_profile_muon_production() const
+    const float* get_mpd() const
     {return dMu;}
 
     // energy at ground
