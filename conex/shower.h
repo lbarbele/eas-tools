@@ -45,7 +45,73 @@ namespace conex {
     float  EGround[3];
 
   public:
-    
+    float get_lge() const
+    {return lgE;}
+
+    float get_zenith() const
+    {return zenith;}
+
+    float get_azimuth() const
+    {return azimuth;}
+
+    int get_seed2() const
+    {return Seed2;}
+
+    int get_seed3() const
+    {return Seed3;}
+
+    float get_first_x() const
+    {return Xfirst;}
+
+    float get_first_h() const
+    {return Hfirst;}
+
+    float get_first_inel() const
+    {return XfirstIn;}
+
+    double get_altitude() const
+    {return altitude;}
+
+    float get_x0() const
+    {return X0;}
+
+    float get_xmax() const
+    {return Xmax;}
+
+    float get_nmax() const
+    {return Nmax;}
+
+    float get_p1() const
+    {return p1;}
+
+    float get_p2() const
+    {return p2;}
+
+    float get_p3() const
+    {return p3;}
+
+    float get_chi2() const
+    {return chi2;}
+
+    float get_xmx() const
+    {return Xmx;}
+
+    float get_nmx() const
+    {return Nmx;}
+
+    float get_xmx_dedx() const
+    {return XmxdEdX;}
+
+    float get_dedx_mx() const
+    {return dEdXmx;}
+
+    float get_cpu_time() const
+    {return cpuTime;}
+
+    int get_nx() const
+    {return nX;}
+
+
   };
 
 } // namespace conex
