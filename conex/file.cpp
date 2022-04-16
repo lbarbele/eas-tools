@@ -51,12 +51,12 @@ namespace conex {
     m_header_tree->SetBranchAddress("elCut",&m_header.elCut);
     m_header_tree->SetBranchAddress("gaCut",&m_header.gaCut);
 
-    m_header_tree->SetBranchAddress("lambdaLgE",m_header.lambdaLgE);
-    m_header_tree->SetBranchAddress("lambdaProton",m_header.lambdaProton);
-    m_header_tree->SetBranchAddress("lambdaPion",m_header.lambdaPion);
-    m_header_tree->SetBranchAddress("lambdaHelium",m_header.lambdaHelium);
-    m_header_tree->SetBranchAddress("lambdaNitrogen",m_header.lambdaNitrogen);
-    m_header_tree->SetBranchAddress("lambdaIron",m_header.lambdaIron);
+    m_header_tree->SetBranchAddress("lambdaLgE",m_header.lambdaLgE.data());
+    m_header_tree->SetBranchAddress("lambdaProton",m_header.lambdaProton.data());
+    m_header_tree->SetBranchAddress("lambdaPion",m_header.lambdaPion.data());
+    m_header_tree->SetBranchAddress("lambdaHelium",m_header.lambdaHelium.data());
+    m_header_tree->SetBranchAddress("lambdaNitrogen",m_header.lambdaNitrogen.data());
+    m_header_tree->SetBranchAddress("lambdaIron",m_header.lambdaIron.data());
 
     if (m_header_tree->GetNbranches() > 27) {
       m_header_tree->SetBranchAddress("resamplingMode",&m_header.resamplingMode);
@@ -64,6 +64,10 @@ namespace conex {
       m_header_tree->SetBranchAddress("f19_cx",&m_header.f19_cx);
       m_header_tree->SetBranchAddress("f19_meson",&m_header.f19_meson);
       m_header_tree->SetBranchAddress("f19",&m_header.f19);
+
+      m_header.m_has_extensions = true;
+    } else {
+      m_header.m_has_extensions = false;
     }
 
     // set addresses of the shower tree
