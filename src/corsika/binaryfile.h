@@ -27,7 +27,6 @@ namespace corsika {
     const subblock& get_trailer() const
     {return m_trailer;}
 
-    // TODO: add support to reverse iterators
     auto begin(){return m_showers.begin();}
     auto cbegin() const {return m_showers.cbegin();}
     auto rbegin() {return m_showers.rbegin();}
