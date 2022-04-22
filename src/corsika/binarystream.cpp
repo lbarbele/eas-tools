@@ -1,5 +1,4 @@
 #include <corsika/binarystream.h>
-#include <corsika/binarystream-iterator.h>
 
 namespace corsika {
 

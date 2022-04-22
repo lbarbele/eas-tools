@@ -1,6 +1,6 @@
 
 #include <corsika/shower.h>
-#include <corsika/binarystream-iterator.h>
+#include <corsika/binarystream.h>
 
 #include <iostream>
 

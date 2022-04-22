@@ -2,7 +2,7 @@
 #define _corsika_shower_h
 
 #include <corsika/subblock.h>
-#include <corsika/binarystream-iterator.h>
+#include <corsika/binarystream.h>
 #include <corsika/particle_iterator.h>
 
 namespace corsika {

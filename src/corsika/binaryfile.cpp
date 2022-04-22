@@ -1,6 +1,5 @@
 #include <corsika/binaryfile.h>
 #include <corsika/binarystream.h>
-#include <corsika/binarystream-iterator.h>
 
 #include <string>
 #include <memory>

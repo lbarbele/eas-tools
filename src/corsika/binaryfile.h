@@ -1,5 +1,5 @@
-#ifndef _corsika_file_h
-#define _corsika_file_h
+#ifndef _corsika_binaryfile_h
+#define _corsika_binaryfile_h
 
 #include <corsika/shower.h>
 #include <corsika/binarystream.h>

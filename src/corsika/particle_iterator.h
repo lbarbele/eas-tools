@@ -3,7 +3,7 @@
 
 #include <corsika/particle.h>
 #include <corsika/subblock.h>
-#include <corsika/binarystream-iterator.h>
+#include <corsika/binarystream.h>
 
 namespace corsika {
 
