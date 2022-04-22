@@ -3,19 +3,19 @@
 
 #include <corsika/particle.h>
 #include <corsika/subblock.h>
-#include <corsika/fstream-iterator.h>
+#include <corsika/binarystream-iterator.h>
 
 namespace corsika {
 
   class particle_iterator {
   public:
-    fstream::iterator m_stream_it;
+    binarystream::iterator m_stream_it;
     subblock::const_iterator m_subblock_it;
     particle m_particle;
 
   public:
     particle_iterator();
-    particle_iterator(const fstream::iterator& it);
+    particle_iterator(const binarystream::iterator& it);
 
     const particle& operator*() const;
     const particle* operator->() const;

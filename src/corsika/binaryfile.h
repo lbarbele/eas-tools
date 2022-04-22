@@ -1,19 +1,19 @@
 #ifndef _corsika_file_h
 #define _corsika_file_h
 
+#include <corsika/shower.h>
+#include <corsika/binarystream.h>
+#include <corsika/subblock.h>
+
 #include <vector>
 #include <memory>
 #include <string>
-
-#include <corsika/shower.h>
-#include <corsika/fstream.h>
-#include <corsika/subblock.h>
 
 namespace corsika {
 
   class binaryfile {
   private:
-    std::shared_ptr<fstream> m_stream;
+    std::shared_ptr<binarystream> m_stream;
     subblock m_header;
     subblock m_trailer;
     std::vector<shower> m_showers;

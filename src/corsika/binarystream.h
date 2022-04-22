@@ -1,24 +1,24 @@
 #ifndef _corsika_fstream_h
 #define _corsika_fstream_h
 
+#include <corsika/word_t.h>
+
 #include <fstream>
 #include <filesystem>
 #include <locale>
 #include <string>
 
-#include <corsika/word_t.h>
-
 namespace corsika {
 
-  class fstream : public std::basic_fstream<word_t> {
+  class binarystream : public std::basic_fstream<word_t> {
   private:
   public:
     class iterator;
 
-    fstream();
-    fstream(const char* fname, ios_base::openmode mode = ios_base::in);
-    fstream(const std::string& fname, ios_base::openmode mode = ios_base::in);
-    fstream(const std::filesystem::path& fname, ios_base::openmode mode = ios_base::in);
+    binarystream();
+    binarystream(const char* fname, ios_base::openmode mode = ios_base::in);
+    binarystream(const std::string& fname, ios_base::openmode mode = ios_base::in);
+    binarystream(const std::filesystem::path& fname, ios_base::openmode mode = ios_base::in);
 
     void open(const char* fname, ios_base::openmode mode = ios_base::in);
     void open(const std::string& fname, ios_base::openmode mode = ios_base::in);

@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include <corsika/particle_iterator.h>
+
+#include <iostream>
 
 namespace corsika {
 
@@ -8,12 +8,12 @@ namespace corsika {
     {}
 
     particle_iterator::particle_iterator(
-      const fstream::iterator& it
+      const binarystream::iterator& it
     ) :
       m_stream_it(it)
     {
       // check if the stream is good
-      if (m_stream_it == fstream::iterator()) {
+      if (m_stream_it == binarystream::iterator()) {
         *this = particle_iterator();
         return;
       }
@@ -51,7 +51,7 @@ namespace corsika {
         m_subblock_it = m_stream_it->begin();
       }
 
-      if (m_stream_it == fstream::iterator() || m_stream_it->empty()) {
+      if (m_stream_it == binarystream::iterator() || m_stream_it->empty()) {
         // this should never happen, we expect the stream iterator either to
         // point to a valid subblock. eof is never reached here
         std::cerr << "corsika::particle_iterator::operator++(): bad stream iterator" << std::endl;

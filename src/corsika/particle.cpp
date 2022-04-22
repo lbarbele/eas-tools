@@ -1,6 +1,6 @@
-#include <algorithm>
-
 #include <corsika/particle.h>
+
+#include <algorithm>
 
 namespace corsika {
 

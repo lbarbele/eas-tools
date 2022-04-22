@@ -1,18 +1,18 @@
-#include <corsika/fstream.h>
-#include <corsika/fstream-iterator.h>
+#include <corsika/binarystream.h>
+#include <corsika/binarystream-iterator.h>
 
 namespace corsika {
 
   // constructors: construct the base with the equivalent constructor and
   // imbue a locale containing the word_codevt conversion facet
   // if opening a file, always set binary mode
-  fstream::fstream()
+  binarystream::binarystream()
   : std::basic_fstream<word_t>()
   {
     imbue(std::locale(std::locale(), new word_codecvt));
   }
 
-  fstream::fstream(
+  binarystream::binarystream(
     const char* fname,
     ios_base::openmode mode
   ) :
@@ -21,7 +21,7 @@ namespace corsika {
     imbue(std::locale(std::locale(), new word_codecvt));
   }
 
-  fstream::fstream(
+  binarystream::binarystream(
     const std::string& fname,
     ios_base::openmode mode
   ) :
@@ -30,7 +30,7 @@ namespace corsika {
     imbue(std::locale(std::locale(), new word_codecvt));
   }
 
-  fstream::fstream(
+  binarystream::binarystream(
     const std::filesystem::path& fname,
     ios_base::openmode mode
   ) :
@@ -42,7 +42,7 @@ namespace corsika {
   // fstream::open: call base's open, but always adding ios_base::binary
   // to the open mode
   void
-  fstream::open(
+  binarystream::open(
     const char* fname,
     ios_base::openmode mode
   )
@@ -51,7 +51,7 @@ namespace corsika {
   }
 
   void
-  fstream::open(
+  binarystream::open(
     const std::string& fname,
     ios_base::openmode mode
   )
@@ -60,7 +60,7 @@ namespace corsika {
   }
 
   void
-  fstream::open(
+  binarystream::open(
     const std::filesystem::path& fname,
     ios_base::openmode mode
   )
@@ -69,16 +69,16 @@ namespace corsika {
   }
 
   // begin/end iterators
-  fstream::iterator
-  fstream::begin()
+  binarystream::iterator
+  binarystream::begin()
   {
-    return fstream::iterator(*this);
+    return binarystream::iterator(*this);
   }
 
-  fstream::iterator
-  fstream::end()
+  binarystream::iterator
+  binarystream::end()
   {
-    return fstream::iterator();
+    return binarystream::iterator();
   }
 
   // insertion/extraction operators

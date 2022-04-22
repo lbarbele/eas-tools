@@ -1,17 +1,17 @@
+#include <corsika/binaryfile.h>
+#include <corsika/binarystream.h>
+#include <corsika/binarystream-iterator.h>
+
 #include <string>
 #include <memory>
 #include <iostream>
-
-#include <corsika/binaryfile.h>
-#include <corsika/fstream.h>
-#include <corsika/fstream-iterator.h>
 
 namespace corsika {
 
   binaryfile::binaryfile(
     const std::string& fname
   ) :
-    m_stream(std::make_shared<fstream>(fname, std::ios::in))
+    m_stream(std::make_shared<binarystream>(fname, std::ios::in))
   {
     // consume the stream until the event end is found
     for (auto it = m_stream->begin(); it != m_stream->end(); ++it) {

@@ -1,14 +1,14 @@
 
-#include <iostream>
-
 #include <corsika/shower.h>
-#include <corsika/fstream-iterator.h>
+#include <corsika/binarystream-iterator.h>
+
+#include <iostream>
 
 namespace corsika {
 
   shower::shower(
-    const std::shared_ptr<fstream>& stream,
-    fstream::iterator& it
+    const std::shared_ptr<binarystream>& stream,
+    binarystream::iterator& it
   ) :
     m_stream(stream),
     m_header(it)

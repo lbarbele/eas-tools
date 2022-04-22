@@ -1,18 +1,18 @@
-#include <iostream>
-
-#include <corsika/fstream.h>
-#include <corsika/fstream-iterator.h>
+#include <corsika/binarystream.h>
+#include <corsika/binarystream-iterator.h>
 #include <corsika/subblock.h>
+
+#include <iostream>
 
 namespace corsika {
 
-  fstream::iterator::iterator()
+  binarystream::iterator::iterator()
   : m_stream(nullptr),
     m_pos(-1)
   {}
 
-  fstream::iterator::iterator(
-    fstream& stream
+  binarystream::iterator::iterator(
+    binarystream& stream
   ) :
     m_stream(&stream)
   {
@@ -22,12 +22,12 @@ namespace corsika {
     {
     case 22932:
       m_subblock_size = 273;
-      m_block_size = 22932/sizeof(fstream::char_type);
+      m_block_size = 22932/sizeof(binarystream::char_type);
       m_has_thinning = false;
       break;
     case 26208:
       m_subblock_size = 312;
-      m_block_size = 26208/sizeof(fstream::char_type) + 2;
+      m_block_size = 26208/sizeof(binarystream::char_type) + 2;
       m_has_thinning = true;
       break;
     default:
@@ -46,42 +46,42 @@ namespace corsika {
   }
 
   long
-  fstream::iterator::get_pos()
+  binarystream::iterator::get_pos()
   const
   {
     return m_pos;
   }
 
   bool
-  fstream::iterator::has_thinning()
+  binarystream::iterator::has_thinning()
   const
   {
     return m_has_thinning;
   }
 
   const subblock& 
-  fstream::iterator::operator*()
+  binarystream::iterator::operator*()
   const
   {
     return m_data;
   }
 
   const subblock*
-  fstream::iterator::operator->()
+  binarystream::iterator::operator->()
   const
   {
     return &m_data;
   }
 
-  fstream::iterator&
-  fstream::iterator::operator++()
+  binarystream::iterator&
+  binarystream::iterator::operator++()
   {
     ++m_pos;
 
     // position the stream should be
     const long pos_it = (m_pos/21)*m_block_size + 1 + (m_pos%21)*m_subblock_size;
     // position the stream actually is
-    const long pos_str = m_stream->tellg()/sizeof(fstream::char_type);
+    const long pos_str = m_stream->tellg()/sizeof(binarystream::char_type);
 
     // reposition the stream if necessary
     if (pos_it != pos_str) {
@@ -105,16 +105,16 @@ namespace corsika {
     return *this;
   }
 
-  fstream::iterator
-  fstream::iterator::operator++(int)
+  binarystream::iterator
+  binarystream::iterator::operator++(int)
   {
-    fstream::iterator other(*this);
+    binarystream::iterator other(*this);
     ++(*this);
     return other;
   }
 
-  fstream::iterator
-  fstream::iterator::operator+(
+  binarystream::iterator
+  binarystream::iterator::operator+(
     long offset
   ) const
   {
@@ -123,7 +123,7 @@ namespace corsika {
       throw;
     }
 
-    auto end = fstream::iterator();
+    auto end = binarystream::iterator();
     auto ret = *this;
 
     while (offset > 0 && ret != end) {
@@ -135,7 +135,7 @@ namespace corsika {
   }
 
   bool 
-  fstream::iterator::operator==(
+  binarystream::iterator::operator==(
     const iterator& other
   ) const
   {
@@ -147,7 +147,7 @@ namespace corsika {
   }
 
   bool
-  fstream::iterator::operator!=(
+  binarystream::iterator::operator!=(
     const iterator& other
   ) const
   {

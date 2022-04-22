@@ -1,17 +1,17 @@
 #ifndef _corsika_fstream_iterator_h
 #define _corsika_fstream_iterator_h
 
+#include <corsika/binarystream.h>
+#include <corsika/subblock.h>
+
 #include <memory>
 #include <vector>
 
-#include <corsika/fstream.h>
-#include <corsika/subblock.h>
-
 namespace corsika {
   
-  class fstream::iterator {
+  class binarystream::iterator {
   private:
-    fstream* m_stream;
+    binarystream* m_stream;
     subblock m_data;
     long m_block_size;
     long m_subblock_size;
@@ -20,7 +20,7 @@ namespace corsika {
 
   public:
     iterator();
-    iterator(fstream& stream);
+    iterator(binarystream& stream);
 
     long get_pos() const;
     bool has_thinning() const;

@@ -1,10 +1,10 @@
 #ifndef _corsika_subblock_h
 #define _corsika_subblock_h
 
+#include <corsika/word_t.h>
+
 #include <vector>
 #include <string>
-
-#include <corsika/word_t.h>
 
 namespace corsika {
 
