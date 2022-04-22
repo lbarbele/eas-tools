@@ -6,9 +6,12 @@ corsika_sources = [
   'binaryfile.cpp',
   'shower.cpp',
   'particle.cpp',
-  'particle_iterator.cpp'
+  'particle_iterator.cpp',
+  'longfile.cpp'
 ]
 
 libcorsika = library(
-  'corsika', corsika_sources
+  'corsika',
+  corsika_sources,
+  include_directories : inc_src
 )

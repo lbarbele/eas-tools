@@ -1,201 +1,150 @@
 #include <iostream>
 #include <iomanip>
-#include <list>
-#include <string>
 
-// #include "conex-file.h"
-// #include "conex-extensions-particlefile.h"
-// #include "conex-extensions-interaction.h"
-// #include "utl-vector.h"
+#include <conex/file.h>
+#include <corsika/longfile.h>
 
-#include "corsika/binaryfile.h"
-#include "corsika/fstream.h"
+#include <TGraph.h>
+#include <TCanvas.h>
+#include <TF1.h>
+#include <TH2.h>
+
+double 
+alphaNerling(
+  const double* sptr,
+  const double* p
+)
+{
+  static const double c[5] = {3.90883, 1.05301, 9.91717, 2.41715, 0.13180};
+  const double& s = *sptr;
+  return (c[0]/std::pow(c[1] + s, c[2]) + c[3] + c[4]*s)/1000;
+}
+
+double
+alphaSong(
+  const double *s,
+  const double *p
+)
+{
+  // value obtained by Song et al. Astropart. Phys 14 (2000) 7
+  // simulations with CORSIKA for gamma/proton/iron showers at 10^17 eV
+  // they provide the values averaged over the entire shower development
+  // return 0.002186; // gamma
+  return 0.002193; // proton
+  // return 0.002189; // iron
+}
 
 int main(void)
 {
-  const std::string baseFileName = "/home/luan/Projetos/offline-tests/reconstructionTests/input/heatSimFiles/DAT013733";
-  const std::string cherFileName = baseFileName + ".cher-tel005";
-  const std::string longFileName = baseFileName + ".long";
-  const std::string lstFileName = baseFileName + ".lst";
+  const double minAge = 0.5;
+  const double maxAge = 1.5;
 
-  corsika::binaryfile cherFile(cherFileName);
+  corsika::longfile file("/home/luan/Projetos/corsika-77410-extended-stackin/run/alphaEff/DAT000001.long");
 
-  auto shower = *cherFile.begin();
+  file.read();
 
-  for (auto part : shower) {
-    std::cout << part[0] << std::endl;
+  auto depths = file.get_particle_profile(corsika::profile_type::depth);
+  auto charged = file.get_particle_profile(corsika::profile_type::charged);
+  auto emioniz = file.get_deposit_profiles(corsika::profile_type::positron);
+  auto muioniz = file.get_deposit_profiles(corsika::profile_type::muplus);
+  auto haioniz = file.get_deposit_profiles(corsika::profile_type::hadron);
+
+  TGraph g;
+
+  const double xmax = file.get_fit().xmax;
+
+  for (int i = 0; i < depths.size() - 1; ++i) {
+    const double x = 0.5*(depths[i] + depths[i+1]);
+    const double s = 3*x/(x + 2*xmax);
+    if (s < minAge || s > maxAge) {
+      continue;
+    }
+    const double dep = (emioniz[i] + muioniz[i] + haioniz[i]) / (depths[i+1] - depths[i]);
+    const double n = charged[i];
+    const double alpha = dep/n;
+    g.SetPoint(g.GetN(), s, alpha);
   }
 
-  // auto first = shower.begin().m_stream_it;
-  // int n = 0;
+  TF1 fcnNerling("", alphaNerling, minAge, maxAge);
+  TF1 fcnSong("", alphaSong, minAge, maxAge);
 
-  // while(first->get_type() == corsika::subblock::type::data) {
-  //   auto part_it = first->begin();
-  //   while(part_it != first->end()) {
-  //     std::cout << part_it->as<float>() << std::endl;
-  //     ++n;
-  //     part_it += 8;
-  //   }
-  //   ++first;
-  // }
+  TH2D hAxis("", "", 100, minAge, maxAge, 100, 0.0021, 0.00269999);
+  hAxis.SetStats(false);
 
-  // std::cout << n << std::endl;
-  // std::cout << first.get_pos() - 1 << std::endl;
-
-  // auto beg = shower.begin();
-  // auto beg_another = beg;
-  // auto end = shower.end();
-  // auto end_another = end;
-
-  // if (beg == beg_another) {
-  //   std::cout << "is equal" << std::endl;
-  // } else {
-  //   std::cout << "is different" << std::endl;
-  // }
-
-  return 0;
-
-  // for (; beg != end; ++beg) {
-
-  // }
-
-  // auto stream_it = beg.m_stream_it;
-  
-  // while(stream_it->get_type() == corsika::subblock::type::data) {
-  //   for (auto sb_it = stream_it->begin(); sb_it != stream_it->end(); sb_it+=8) {
-  //     corsika::particle part(&sb_it->as<float>());
-  //     std::cout << part[0] << std::endl;
-  //   }
-  //   ++stream_it;
-  // }
-
-  // for (auto shower : cherFile) {
-  //   auto beg = shower.begin();
-  //   auto end = shower.end();
-  //   auto it = beg;
-  //   for (; it != end; ++it) { auto particle = *it;
-  //   // for (auto particle : shower) {
-  //   // for (; beg != end; ++beg) { auto particle = *beg;
-  //     for (int i = 0; i < 8; ++i) {
-  //       std::cout << std::setw(13) << particle[i];
-  //     }
-  //     std::cout << std::endl;
-  //   }
-  // }
+  TCanvas c;
+  hAxis.Draw("axis");
+  g.Draw("same l");
+  fcnNerling.Draw("same l");
+  fcnSong.Draw("same l");
+  c.Print("alpha.pdf");
 
   return 0;
 }
 
-// using utl::vector;
+int
+mainaa()
+{
+  const double minAge = 0.5;
+  const double maxAge = 1.5;
 
-// bool
-// is_same(
-//   const conex::extensions::particle& part,
-//   const conex::extensions::projectile& proj,
-//   const double phi,
-//   const double theta
-// )
-// {
-//   // check for same ID
-//   if (part.get_id() != proj.get_id()) {
-//     return false;
-//   }
+  conex::file cxFile("../data/conex10302588_sibyll23d_629771534_100.root");
 
-//   // check for energy
-//   if (std::fabs(part.get_energy()/proj.get_energy() - 1) > 0.001) {
-//     return false;
-//   }
+  TCanvas c;
+  c.Print("alpha.pdf[");
 
-//   // check momentum direction
-//   auto p_part = part.get_momentum().to_obs(phi, theta);
-//   auto p_proj = proj.get_momentum();
-//   if ((p_part*p_proj)/(p_part.norm()*p_proj.norm()) < 0.999) {
-//     return false;
-//   }
+  // plot ratio between song and nerling
+  auto ratio = [](const double *s, const double *p){
+    return alphaSong(s,p)/alphaNerling(s,p);
+  };
 
-//   return true;
-// }
+  TF1 fcnRatio("", ratio, minAge, maxAge);
+  fcnRatio.Draw("l");
+  c.Print("alpha.pdf");
 
-// struct stackin_particle {
+  TH2D hAxis("", "", 100, minAge, maxAge, 100, 0.0021, 0.0032999);
+  hAxis.SetStats(false);
 
-//   int id;
-//   double energy;
-//   double px;
-//   double py;
-//   double pz;
-//   double x;
-//   double y;
-//   double h;
-//   double t;
-//   int gen;
-//   double h_previous;
+  TF1 fcnNerling("", alphaNerling, minAge, maxAge);
+  TF1 fcnSong("", alphaSong, minAge, maxAge);
 
-// };
+  for (int ishower = 0; ishower < cxFile.get_n_showers(); ++ishower) {
+    const auto& shower = cxFile.get_shower(ishower);
 
-// int
-// main(
-//   int argc,
-//   char const** argv
-// )
-// {
-//   const double pi = std::acos(-1);
-//   const double c = 299792458.;
+    if (shower.get_lge() < 1117.1) {
 
-//   conex::file cxFile("../../double-bump/data/anom_sibyll23d_997649511_100.root");
-//   auto shower = cxFile.get_shower(0);
-//   double theta = shower.zenith*pi/180.;
-//   double phi = shower.azimuth*pi/180.;
+      const double xmax = shower.get_xmax();
 
-//   conex::extensions::particlefile partFile("../../double-bump/data/anom_sibyll23d_997649511_100_part.root");
+      const auto depths = shower.get_depths();
+      const auto electrons = shower.get_electrons();
+      const auto dedx = shower.get_dedx();
 
-//   auto event = partFile.get_event(0);
+      TGraph g;
 
-//   // get the first interaction and the primary projectile
-//   auto firstInteraction = event.get_interaction(0);
-//   conex::extensions::projectile primaryParticle = firstInteraction.get_projectile();
+      for (int ipt = 0; ipt < shower.get_nx()-1; ++ipt) {
+        const double x = 0.5*(depths[ipt] + depths[ipt+1]);
+        const double s = 3*x/(x + 2*xmax);
 
-//   // set an energy cutoff above which we will store particles
-//   const double energyCut = 0.005 * primaryParticle.Energy;
+        if (s < minAge || s > maxAge) {
+          continue;
+        }
 
-//   std::list<conex::extensions::particle> particleStack;
-//   std::list<conex::extensions::particle> leadingStack;
+        const double n = 0.5*(electrons[ipt] + electrons[ipt+1]);
+        const double alpha = dedx[ipt] / n;
+        
+        g.SetPoint(g.GetN(), s, alpha);
+      }
 
-//   // get the particles from the first interaction
-//   for (auto& particle : firstInteraction) {
-//     if (particle.Energy >= energyCut) {
-//       leadingStack.push_back(particle);
-//     } else {
-//       particleStack.push_back(particle);
-//     }
-//   }
+      hAxis.Draw("axis");
+      g.Draw("same l");
+      fcnNerling.Draw("same l");
+      fcnSong.Draw("same l");
+      c.Print("alpha.pdf");
 
-//   std::cout << "looking for the interactions of " << leadingStack.size() << " leading particles" << std::endl;
+      break;
+    }
+  }
 
-//   // now search for the interactions of these leading particles
-//   for (auto leading : leadingStack) {
+  c.Print("alpha.pdf]");
 
-//     std::cout
-//       << "looking for id " << leading.get_id()
-//       << " with energy " << leading.get_energy()
-//       << " GeV ... ";
-
-//     bool found = false;
-
-//     for (int i = 1; i < event.get_n_interactions(); ++i) {
-//       auto interaction = event.get_interaction(i);
-//       auto projectile = interaction.get_projectile();
-
-//       if (is_same(leading, projectile, phi, theta)) {
-//         std::cout << "found at interaction " << interaction.get_interaction_counter() << std::endl;
-//         found = true;
-//         break;
-//       }
-//     }
-
-//     if (!found) {
-//       std::cout << "not found!" << std::endl;
-//     }
-//   }
-
-//   return 0;
-// }
+  return 0;
+}

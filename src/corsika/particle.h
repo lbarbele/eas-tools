@@ -6,7 +6,7 @@
 namespace corsika {
 
   class particle {
-  private:
+  protected:
     std::array<float, 8> m_data;
   
   public:
