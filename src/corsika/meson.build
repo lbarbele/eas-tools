@@ -1,7 +1,7 @@
 corsika_sources = [
   'word_t.cpp',
   'binarystream.cpp',
-  'binarystream-iterator.cpp',
+  'binarystream.iterator.cpp',
   'subblock.cpp',
   'binaryfile.cpp',
   'shower.cpp',
