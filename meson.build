@@ -6,3 +6,4 @@ ld_args = run_command('root-config', '--libs').stdout().strip().split(' ')
 inc_src = include_directories('src')
 
 subdir('src')
+subdir('examples')
