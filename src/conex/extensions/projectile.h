@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#include "util/vector.h"
+#include <util/vector.h>
 
 namespace conex::extensions {
 

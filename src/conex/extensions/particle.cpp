@@ -1,4 +1,4 @@
-#include "particle.h"
+#include <conex/extensions/particle.h>
 
 namespace conex::extensions {
 

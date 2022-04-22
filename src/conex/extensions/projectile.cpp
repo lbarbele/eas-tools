@@ -1,4 +1,4 @@
-#include "projectile.h"
+#include <conex/extensions/projectile.h>
 
 #include <cmath>
 

@@ -4,8 +4,8 @@
 #include <vector>
 #include <cstddef>
 
-#include "projectile.h"
-#include "particle.h"
+#include <conex/extensions/projectile.h>
+#include <conex/extensions/particle.h>
 
 namespace conex::extensions {
 

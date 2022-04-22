@@ -4,8 +4,8 @@
 #include <cmath>
 #include <vector>
 
-#include "../util/constants.h"
-#include "../util/gaisser_hillas_fit.h"
+#include <util/constants.h>
+#include <util/gaisser_hillas_fit.h>
 
 namespace conex {
 

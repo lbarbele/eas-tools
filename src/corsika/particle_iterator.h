@@ -1,9 +1,9 @@
 #ifndef _corsika_particle_iterator_h
 #define _corsika_particle_iterator_h
 
-#include "particle.h"
-#include "subblock.h"
-#include "fstream-iterator.h"
+#include <corsika/particle.h>
+#include <corsika/subblock.h>
+#include <corsika/fstream-iterator.h>
 
 namespace corsika {
 

@@ -1,4 +1,4 @@
-#include "word_t.h"
+#include <corsika/word_t.h>
 
 #include <cstdint>
 #include <locale>

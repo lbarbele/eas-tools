@@ -5,9 +5,9 @@
 #include <memory>
 #include <string>
 
-#include "shower.h"
-#include "fstream.h"
-#include "subblock.h"
+#include <corsika/shower.h>
+#include <corsika/fstream.h>
+#include <corsika/subblock.h>
 
 namespace corsika {
 

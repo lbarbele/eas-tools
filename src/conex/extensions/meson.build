@@ -8,8 +8,8 @@ conex_extension_sources = [
 
 libconexextensions = library(
   'conex_extensions', conex_extension_sources,
+  include_directories: inc_src,
   cpp_args: cpp_args,
   link_args: ld_args,
-  link_with: [libutil],
-  include_directories: include_directories('../../')
+  link_with: [libutil]
 )

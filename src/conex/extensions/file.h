@@ -7,9 +7,9 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include "event.h"
-#include "particle.h"
-#include "projectile.h"
+#include <conex/extensions/event.h>
+#include <conex/extensions/particle.h>
+#include <conex/extensions/projectile.h>
 
 namespace conex::extensions {
 

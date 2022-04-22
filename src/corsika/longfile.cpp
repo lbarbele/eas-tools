@@ -2,7 +2,7 @@
 #include <limits>
 #include <iomanip>
 
-#include "longfile.h"
+#include <corsika/longfile.h>
 
 namespace corsika {
 

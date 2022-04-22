@@ -6,9 +6,9 @@
 
 #include <TTree.h>
 
-#include "interaction.h"
-#include "particle.h"
-#include "projectile.h"
+#include <conex/extensions/interaction.h>
+#include <conex/extensions/particle.h>
+#include <conex/extensions/projectile.h>
 
 namespace conex::extensions {
 

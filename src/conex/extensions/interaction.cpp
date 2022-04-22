@@ -1,4 +1,4 @@
-#include "interaction.h"
+#include <conex/extensions/interaction.h>
 
 namespace conex::extensions {
 

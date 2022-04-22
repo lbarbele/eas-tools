@@ -8,8 +8,8 @@
 #include <TFile.h>
 #include <TTree.h>
 
-#include "header.h"
-#include "shower.h"
+#include <conex/header.h>
+#include <conex/shower.h>
 
 namespace conex {
 

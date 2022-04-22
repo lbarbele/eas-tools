@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "particle_iterator.h"
+#include <corsika/particle_iterator.h>
 
 namespace corsika {
 

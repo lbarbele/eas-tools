@@ -1,7 +1,7 @@
 #ifndef _corsika_cherenkov_photon_h
 #define _corsika_cherenkov_photon_h
 
-#include "particle.h"
+#include <corsika/particle.h>
 
 namespace corsika{
 

@@ -1,4 +1,4 @@
-#include "gaisser_hillas_fit.h"
+#include <util/gaisser_hillas_fit.h>
 
 #include <cmath>
 

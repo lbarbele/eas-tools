@@ -2,9 +2,9 @@
 #include <memory>
 #include <iostream>
 
-#include "binaryfile.h"
-#include "fstream.h"
-#include "fstream-iterator.h"
+#include <corsika/binaryfile.h>
+#include <corsika/fstream.h>
+#include <corsika/fstream-iterator.h>
 
 namespace corsika {
 

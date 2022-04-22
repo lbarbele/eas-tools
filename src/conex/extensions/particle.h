@@ -1,7 +1,7 @@
 #ifndef _conex_extensions_particle_h
 #define _conex_extensions_particle_h
 
-#include "util/vector.h"
+#include <util/vector.h>
 
 namespace conex::extensions {
 

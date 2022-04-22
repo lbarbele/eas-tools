@@ -36,47 +36,47 @@ alphaSong(
 
 int main(void)
 {
-  const double minAge = 0.5;
-  const double maxAge = 1.5;
+  // const double minAge = 0.5;
+  // const double maxAge = 1.5;
 
-  corsika::longfile file("/home/luan/Projetos/corsika-77410-extended-stackin/run/alphaEff/DAT000001.long");
+  // corsika::longfile file("/home/luan/Projetos/corsika-77410-extended-stackin/run/alphaEff/DAT000001.long");
 
-  file.read();
+  // file.read();
 
-  auto depths = file.get_particle_profile(corsika::profile_type::depth);
-  auto charged = file.get_particle_profile(corsika::profile_type::charged);
-  auto emioniz = file.get_deposit_profiles(corsika::profile_type::positron);
-  auto muioniz = file.get_deposit_profiles(corsika::profile_type::muplus);
-  auto haioniz = file.get_deposit_profiles(corsika::profile_type::hadron);
+  // auto depths = file.get_particle_profile(corsika::profile_type::depth);
+  // auto charged = file.get_particle_profile(corsika::profile_type::charged);
+  // auto emioniz = file.get_deposit_profiles(corsika::profile_type::positron);
+  // auto muioniz = file.get_deposit_profiles(corsika::profile_type::muplus);
+  // auto haioniz = file.get_deposit_profiles(corsika::profile_type::hadron);
 
-  TGraph g;
+  // TGraph g;
 
-  const double xmax = file.get_fit().xmax;
+  // const double xmax = file.get_fit().xmax;
 
-  for (int i = 0; i < depths.size() - 1; ++i) {
-    const double x = 0.5*(depths[i] + depths[i+1]);
-    const double s = 3*x/(x + 2*xmax);
-    if (s < minAge || s > maxAge) {
-      continue;
-    }
-    const double dep = (emioniz[i] + muioniz[i] + haioniz[i]) / (depths[i+1] - depths[i]);
-    const double n = charged[i];
-    const double alpha = dep/n;
-    g.SetPoint(g.GetN(), s, alpha);
-  }
+  // for (int i = 0; i < depths.size() - 1; ++i) {
+  //   const double x = 0.5*(depths[i] + depths[i+1]);
+  //   const double s = 3*x/(x + 2*xmax);
+  //   if (s < minAge || s > maxAge) {
+  //     continue;
+  //   }
+  //   const double dep = (emioniz[i] + muioniz[i] + haioniz[i]) / (depths[i+1] - depths[i]);
+  //   const double n = charged[i];
+  //   const double alpha = dep/n;
+  //   g.SetPoint(g.GetN(), s, alpha);
+  // }
 
-  TF1 fcnNerling("", alphaNerling, minAge, maxAge);
-  TF1 fcnSong("", alphaSong, minAge, maxAge);
+  // TF1 fcnNerling("", alphaNerling, minAge, maxAge);
+  // TF1 fcnSong("", alphaSong, minAge, maxAge);
 
-  TH2D hAxis("", "", 100, minAge, maxAge, 100, 0.0021, 0.00269999);
-  hAxis.SetStats(false);
+  // TH2D hAxis("", "", 100, minAge, maxAge, 100, 0.0021, 0.00269999);
+  // hAxis.SetStats(false);
 
-  TCanvas c;
-  hAxis.Draw("axis");
-  g.Draw("same l");
-  fcnNerling.Draw("same l");
-  fcnSong.Draw("same l");
-  c.Print("alpha.pdf");
+  // TCanvas c;
+  // hAxis.Draw("axis");
+  // g.Draw("same l");
+  // fcnNerling.Draw("same l");
+  // fcnSong.Draw("same l");
+  // c.Print("alpha.pdf");
 
   return 0;
 }
@@ -84,67 +84,67 @@ int main(void)
 int
 mainaa()
 {
-  const double minAge = 0.5;
-  const double maxAge = 1.5;
+  // const double minAge = 0.5;
+  // const double maxAge = 1.5;
 
-  conex::file cxFile("../data/conex10302588_sibyll23d_629771534_100.root");
+  // conex::file cxFile("../data/conex10302588_sibyll23d_629771534_100.root");
 
-  TCanvas c;
-  c.Print("alpha.pdf[");
+  // TCanvas c;
+  // c.Print("alpha.pdf[");
 
-  // plot ratio between song and nerling
-  auto ratio = [](const double *s, const double *p){
-    return alphaSong(s,p)/alphaNerling(s,p);
-  };
+  // // plot ratio between song and nerling
+  // auto ratio = [](const double *s, const double *p){
+  //   return alphaSong(s,p)/alphaNerling(s,p);
+  // };
 
-  TF1 fcnRatio("", ratio, minAge, maxAge);
-  fcnRatio.Draw("l");
-  c.Print("alpha.pdf");
+  // TF1 fcnRatio("", ratio, minAge, maxAge);
+  // fcnRatio.Draw("l");
+  // c.Print("alpha.pdf");
 
-  TH2D hAxis("", "", 100, minAge, maxAge, 100, 0.0021, 0.0032999);
-  hAxis.SetStats(false);
+  // TH2D hAxis("", "", 100, minAge, maxAge, 100, 0.0021, 0.0032999);
+  // hAxis.SetStats(false);
 
-  TF1 fcnNerling("", alphaNerling, minAge, maxAge);
-  TF1 fcnSong("", alphaSong, minAge, maxAge);
+  // TF1 fcnNerling("", alphaNerling, minAge, maxAge);
+  // TF1 fcnSong("", alphaSong, minAge, maxAge);
 
-  for (int ishower = 0; ishower < cxFile.get_n_showers(); ++ishower) {
-    const auto& shower = cxFile.get_shower(ishower);
+  // for (int ishower = 0; ishower < cxFile.get_n_showers(); ++ishower) {
+  //   const auto& shower = cxFile.get_shower(ishower);
 
-    if (shower.get_lge() < 1117.1) {
+  //   if (shower.get_lge() < 1117.1) {
 
-      const double xmax = shower.get_xmax();
+  //     const double xmax = shower.get_xmax();
 
-      const auto depths = shower.get_depths();
-      const auto electrons = shower.get_electrons();
-      const auto dedx = shower.get_dedx();
+  //     const auto depths = shower.get_depths();
+  //     const auto electrons = shower.get_electrons();
+  //     const auto dedx = shower.get_dedx();
 
-      TGraph g;
+  //     TGraph g;
 
-      for (int ipt = 0; ipt < shower.get_nx()-1; ++ipt) {
-        const double x = 0.5*(depths[ipt] + depths[ipt+1]);
-        const double s = 3*x/(x + 2*xmax);
+  //     for (int ipt = 0; ipt < shower.get_nx()-1; ++ipt) {
+  //       const double x = 0.5*(depths[ipt] + depths[ipt+1]);
+  //       const double s = 3*x/(x + 2*xmax);
 
-        if (s < minAge || s > maxAge) {
-          continue;
-        }
+  //       if (s < minAge || s > maxAge) {
+  //         continue;
+  //       }
 
-        const double n = 0.5*(electrons[ipt] + electrons[ipt+1]);
-        const double alpha = dedx[ipt] / n;
+  //       const double n = 0.5*(electrons[ipt] + electrons[ipt+1]);
+  //       const double alpha = dedx[ipt] / n;
         
-        g.SetPoint(g.GetN(), s, alpha);
-      }
+  //       g.SetPoint(g.GetN(), s, alpha);
+  //     }
 
-      hAxis.Draw("axis");
-      g.Draw("same l");
-      fcnNerling.Draw("same l");
-      fcnSong.Draw("same l");
-      c.Print("alpha.pdf");
+  //     hAxis.Draw("axis");
+  //     g.Draw("same l");
+  //     fcnNerling.Draw("same l");
+  //     fcnSong.Draw("same l");
+  //     c.Print("alpha.pdf");
 
-      break;
-    }
-  }
+  //     break;
+  //   }
+  // }
 
-  c.Print("alpha.pdf]");
+  // c.Print("alpha.pdf]");
 
   return 0;
 }

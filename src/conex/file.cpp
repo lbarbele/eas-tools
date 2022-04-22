@@ -1,8 +1,8 @@
 #include <string>
 #include <iostream>
 
-#include "file.h"
-#include "shower.h"
+#include <conex/file.h>
+#include <conex/shower.h>
 
 namespace conex {
 
