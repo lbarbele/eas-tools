@@ -6,17 +6,23 @@
 #include <ostream>
 #include <iomanip>
 #include <array>
-#include <vector>
+#include <valarray>
 
 namespace corsika {
 
   class profile {
+  public:
+    enum class type : unsigned int {
+      depth = 0, gammas, positrons, electrons, mu_plus, mu_minus, hadrons, charged, nuclei,
+      depth_dep, gamma_dep, em_ioniz, em_cut, mu_ioniz, mu_cut, hadr_ioniz, hadr_cut, netrino, dedx_sum
+    };
+
   private:
     bool m_is_slant;
     unsigned int m_size;
     double m_step_size;
     util::gaisser_hillas_fit m_fit;
-    std::array<std::vector<double>, 20> m_data;
+    std::array<std::valarray<double>, 20> m_data;
 
   public:
     profile();
@@ -24,8 +30,15 @@ namespace corsika {
     void clear();
     void resize(const unsigned int size);
 
-    std::vector<double>& get(const unsigned int iprof);
-    const std::vector<double>& get(const unsigned int iprof) const;
+    std::valarray<double>& get(const unsigned int iprof)
+    {return m_data.at(iprof);}
+    const std::valarray<double>& get(const unsigned int iprof) const
+    {return m_data.at(iprof);}
+
+    std::valarray<double>& get(const type tp)
+    {return get(static_cast<unsigned int>(tp));}
+    const std::valarray<double>& get(const type tp) const
+    {return get(static_cast<unsigned int>(tp));}
 
     bool empty() const
     {return m_size == 0;}
@@ -60,7 +73,7 @@ namespace corsika {
     for (unsigned int istart : {0, 10}) {
       for (unsigned int istep = 0; istep < prof.size(); ++istep) {
         for (unsigned int icol = istart; icol < istart+10; ++icol) {
-          stream << std::setw(13) << prof.get(icol).at(istep);
+          stream << std::setw(13) << prof.get(icol)[istep];
         }
         stream << std::endl;
       }

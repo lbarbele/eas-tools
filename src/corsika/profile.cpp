@@ -13,7 +13,7 @@ namespace corsika {
   profile::clear()
   {
     for (auto& v : m_data) {
-      v.clear();
+      v.resize(0);
     }
 
     m_size = 0;
@@ -25,41 +25,10 @@ namespace corsika {
   )
   {
     for (auto& v : m_data) {
-      v.resize(size);
+      v.resize(size, 0);
     }
 
     m_size = size;
   }
-
-  std::vector<double>&
-  profile::get(
-    const unsigned int iprof
-  )
-  {
-    return m_data.at(iprof);
-  }
-
-  const std::vector<double>&
-  profile::get(
-    const unsigned int iprof
-  ) const
-  {
-    return m_data.at(iprof);
-  }
-
-  // void
-  // profile::set_fit(
-  //   util::gaisser_hillas_fit&& fit
-  // )
-  // {
-  //   m_fit = fit;
-  // }
-
-  // const util::gaisser_hillas_fit&
-  // profile::get_fit()
-  // const
-  // {
-  //   return m_fit;
-  // }
 
 } // namespace corsika

@@ -97,11 +97,11 @@ namespace corsika {
     for (unsigned int iline = 0; iline < nsteps; ++iline) {
       // read all columns
       for (int iprof = 0; iprof < 10; ++iprof) {
-        stream >> m_profile.get(iprof).at(iline);
+        stream >> m_profile.get(iprof)[iline];
       }
 
       // consitency check of atmospheric depth
-      const double& depth = m_profile.get(0).at(iline);
+      const double& depth = m_profile.get(0)[iline];
       if (1e-10 < std::fabs((iline+1)*step_size/depth - 1) ) {
         std::cerr << "bad depth value when reading .long file" << std::endl;
         return false;
@@ -143,11 +143,11 @@ namespace corsika {
     for (unsigned int iline = 0; iline < nsteps; ++iline) {
       // read all columns
       for (int iprof = 10; iprof < 20; ++iprof) {
-        stream >> m_profile.get(iprof).at(iline);
+        stream >> m_profile.get(iprof)[iline];
       }
 
       // consitency check of atmospheric depth
-      const double& depth = m_profile.get(10).at(iline);
+      const double& depth = m_profile.get(10)[iline];
       if (1e-10 < std::fabs((iline + 0.5)*step_size/depth - 1) ) {
         std::cerr << "bad depth value when reading .long file" << std::endl;
         return false;
@@ -201,7 +201,7 @@ namespace corsika {
         return false;
       }
 
-      util::gaisser_hillas_fit fit(params);
+      m_profile.set_fit(util::gaisser_hillas_fit(params));
 
       // read the chi2/dof
       stream.ignore(21);
