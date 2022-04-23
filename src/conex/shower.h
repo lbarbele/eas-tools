@@ -54,8 +54,8 @@ namespace conex {
     util::gaisser_hillas_fit get_fit() const
     {
       util::gaisser_hillas_fit fit(Nmax, X0, Xmax, p1, p2, p3);
-      fit.set_ndof(nX);
-      fit.set_chi2(chi2);
+      // fit.set_ndof(nX);
+      // fit.set_chi2(chi2);
       return fit;
     }
 
