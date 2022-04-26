@@ -33,9 +33,36 @@ namespace conex {
     const header& get_header() const;
     long long get_n_showers() const;
     const shower& get_shower(size_t pos);
+    const shower& get_shower() const;
 
     const shower& operator[](size_t pos);
 
+    iterator begin();
+    iterator end();
+
+  };
+
+  class file::iterator {
+  private:
+    int m_pos;
+    file* m_file;
+
+  public:
+    iterator();
+    iterator(file& f);
+
+    int get_pos() const
+    {return m_pos;}
+
+    const shower& operator*();
+    const shower* operator->();
+
+    iterator& operator++();
+    iterator operator++(int);
+
+    bool operator==(const iterator& other) const;
+    bool operator!=(const iterator& other) const;
+  
   };
 
 } // namespace conex

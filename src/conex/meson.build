@@ -1,5 +1,6 @@
 conex_sources = [
-  'file.cpp'
+  'file.cpp',
+  'file.iterator.cpp'
 ]
 
 libconex = library(

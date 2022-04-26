@@ -141,11 +141,30 @@ namespace conex {
   }
 
   const shower&
+  file::get_shower()
+  const
+  {
+    return m_shower;
+  }
+
+  const shower&
   file::operator[](
     size_t pos
   )
   {
     return get_shower(pos);
+  }
+
+  file::iterator
+  file::begin()
+  {
+    return iterator(*this);
+  }
+
+  file::iterator
+  file::end()
+  {
+    return iterator();
   }
 
 } // namespace conex
