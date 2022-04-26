@@ -13,8 +13,8 @@ namespace corsika {
   class profile {
   public:
     enum class type : unsigned int {
-      depth = 0, gammas, positrons, electrons, mu_plus, mu_minus, hadrons, charged, nuclei,
-      depth_dep, gamma_dep, em_ioniz, em_cut, mu_ioniz, mu_cut, hadr_ioniz, hadr_cut, netrino, dedx_sum
+      depth = 0, gammas, positrons, electrons, mu_plus, mu_minus, hadrons, charged, nuclei, cherenkov,
+      depth_dep, gamma_dep, em_ioniz, em_cut, mu_ioniz, mu_cut, hadr_ioniz, hadr_cut, netrino_dep, dedx_sum
     };
 
   private:
