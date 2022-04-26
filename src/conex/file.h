@@ -14,6 +14,8 @@
 namespace conex {
 
   class file : private TFile {
+  public:
+    class iterator;
   // TODO: add support to the leading interactions tree
   // TODO: add a shower iterator, so that range-based for loops can be used
   private:

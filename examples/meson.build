@@ -1,23 +1,16 @@
-executable(
-  'make_stack', 'make_stack.cpp',
-  include_directories: inc_src,
-  cpp_args: cpp_args,
-  link_args: ld_args,
-  link_with: [libcorsika, libconex, libconexextensions, libutil]
-)
+example_progs = {
+  'main' : ['main.cpp'],
+  'make_stack' : ['make_stack.cpp'],
+  'get_alpha' : ['get_alpha.cpp'],
+  'double_bump_finder' : ['double_bump_finder.cpp']
+}
 
-executable(
-  'main', ['main.cpp'],
-  include_directories: inc_src,
-  cpp_args: cpp_args,
-  link_args: ld_args,
-  link_with: [libcorsika, libconex, libconexextensions, libutil]
-)
-
-executable(
-  'get_alpha', ['get_alpha.cpp'],
-  include_directories: inc_src,
-  cpp_args: cpp_args,
-  link_args: ld_args,
-  link_with: [libcorsika, libconex, libconexextensions, libutil]
-)
+foreach name, sources : example_progs
+  executable(
+    name, sources,
+    include_directories: inc_src,
+    cpp_args: cpp_args,
+    link_args: ld_args,
+    link_with: [libcorsika, libconex, libconexextensions, libutil]
+  )
+endforeach
