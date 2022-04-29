@@ -11,5 +11,6 @@ libconexextensions = library(
   include_directories: inc_src,
   cpp_args: cpp_args,
   link_args: ld_args,
-  link_with: [libutil]
+  link_with: [libutil],
+  install: true
 )

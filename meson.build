@@ -7,3 +7,6 @@ inc_src = include_directories('include')
 
 subdir('src')
 subdir('examples')
+
+# install headers
+install_subdir('include', install_dir: 'include', strip_directory: true)

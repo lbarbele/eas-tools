@@ -8,6 +8,7 @@ libconex = library(
   include_directories : inc_src,
   cpp_args: cpp_args,
   link_args: ld_args,
+  install: true
 )
 
 subdir('extensions')
