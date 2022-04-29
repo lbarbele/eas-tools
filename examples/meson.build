@@ -1,5 +1,4 @@
 example_progs = {
-  'main' : ['main.cpp'],
   'make_stack' : ['make_stack.cpp'],
   'get_alpha' : ['get_alpha.cpp']
 }
