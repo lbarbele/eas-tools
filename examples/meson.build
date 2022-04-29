@@ -1,6 +1,7 @@
 example_progs = {
   'make_stack' : ['make_stack.cpp'],
-  'get_alpha' : ['get_alpha.cpp']
+  'get_alpha' : ['get_alpha.cpp'],
+  'fit_conex_profiles' : ['fit_conex_profiles.cpp']
 }
 
 foreach name, sources : example_progs
