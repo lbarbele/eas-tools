@@ -118,12 +118,10 @@
 #include <TCanvas.h>
 
 #include <conex/file.h>
+#include <util/math.h>
 
 TGraph get_dedx_profile(const conex::shower& sh);
 TGraphErrors get_profile_cut(TGraph& g, bool doFluctuate = false);
-
-double ghFunction(const double* x, const double* p);
-double uspFunction(const double* x, const double* p);
 
 void four_parameter_fits(TFile& file, int argc, char** argv);
 void three_parameter_fits(TFile& file);
@@ -384,7 +382,7 @@ two_parameter_fits(
       const double lgecal = std::log10(p[0]) - 9;
       p[1] = fit_X0->Eval(lgecal);
       p[3] = fit_lambda->Eval(lgecal);
-      return ghFunction(x, p);
+      return util::math::gaisser_hillas(x, p);
     };
     
     TF1 gh("", ghFunction_two, min, max, 4);
@@ -399,7 +397,7 @@ two_parameter_fits(
       const double lgecal = std::log10(p[0]) - 9;
       p[2] = fit_L->Eval(lgecal);
       p[3] = fit_R->Eval(lgecal);
-      return uspFunction(x, p);
+      return util::math::usp_function(x, p);
     };
 
     TF1 usp("", uspFunction_two, min, max, 4);
@@ -465,7 +463,7 @@ three_parameter_fits(
     // make a gaisser-hillas fit, with the calorimetric energy as a free parameter
     auto ghFunction_three = [&](double* x, double* p){
       p[1] = fit_X0->Eval(std::log10(p[0]) - 9);
-      return ghFunction(x, p);
+      return util::math::gaisser_hillas(x, p);
     };
     
     TF1 gh("", ghFunction_three, min, max, 4);
@@ -478,7 +476,7 @@ three_parameter_fits(
     // make a USP fit, with the calorimetric energy as a free parameter
     auto uspFunction_three = [&](double* x, double* p){
       p[2] = fit_L->Eval(std::log10(p[0]) - 9);
-      return uspFunction(x, p);
+      return util::math::usp_function(x, p);
     };
 
     TF1 usp("", uspFunction_three, min, max, 4);
@@ -569,7 +567,7 @@ four_parameter_fits(
       const double max = profile.GetX()[profile.GetN()-1];
 
       // make a gaisser-hillas fit, with the calorimetric energy as a free parameter
-      TF1 gh("", ghFunction, min, max, 4);
+      TF1 gh("", util::math::gaisser_hillas, min, max, 4);
       gh.SetParameter(0, ecal);
       gh.SetParameter(1, -130);
       gh.SetParameter(2, xmax);
@@ -577,7 +575,7 @@ four_parameter_fits(
       ghFit = *profile.Fit(&gh, "SQN");
 
       // make a USP fit, with the calorimetric energy as a free parameter
-      TF1 usp("", uspFunction, min, max, 4);
+      TF1 usp("", util::math::usp_function, min, max, 4);
       usp.SetParameter(0, ecal);
       usp.SetParameter(1, xmax);
       usp.SetParameter(2, 225);
@@ -668,49 +666,4 @@ get_profile_cut(
   } else {
     return TGraphErrors(npt, x+ifirst, first, nullptr, v);
   }
-}
-
-
-
-// universal shower profile function
-double
-uspFunction(
-  const double *x,
-  const double *p
-)
-{
-  const double& ecal = p[0];
-  const double& xmax = p[1];
-  const double& l = p[2];
-  const double& r = p[3];
-  const double invr2 = 1.0/(r*r);
-
-  const double z = (1.0/r + (x[0]-xmax)/l) / r;
-
-  return z<=0? 0 : ecal*std::pow(z,invr2)*std::exp(-z)/(l*r*std::tgamma(1+invr2));
-}
-
-
-
-// gaisser hillas function
-double
-ghFunction(
-  const double* x,
-  const double* p
-)
-{
-  const double& ecal = p[0];
-  const double& x0 = p[1];
-  const double& xmax = p[2];
-  const double& l = p[3];
-
-  const double z = (*x - x0)/l;
-
-  if (z <= 0) {
-    return 0;
-  }
-
-  const double am1 = (xmax - x0)/l;
-
-  return ecal * std::pow(z, am1) * std::exp(-z) / (l * std::tgamma(1+am1));
 }
