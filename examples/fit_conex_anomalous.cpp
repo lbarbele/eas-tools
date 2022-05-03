@@ -13,6 +13,7 @@
 #include <TFitResult.h>
 #include <TString.h>
 #include <TSystem.h>
+#include <TROOT.h>
 
 #include <conex/file.h>
 #include <util/math.h>
@@ -63,6 +64,10 @@ main(
   char** argv
 )
 {
+  // let ROOT compute the chi2 in parallel
+  ROOT::EnableThreadSafety();
+  ROOT::EnableImplicitMT();
+
   // the output file
   TFile file("find_anomalous.root", "recreate");
 
