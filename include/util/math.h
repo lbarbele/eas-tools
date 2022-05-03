@@ -1,25 +1,11 @@
 
 namespace util::math {
 
-  template <typename T>
-  T
-  gaisser_hillas(
-    const T x,
-    const T nmx,
-    const T x0,
-    const T xmx,
-    const T l
-  )
-  {
-    return x <= x0 ? 0 : nmx*std::pow((x-x0)/(xmx-x0),(xmx-x0)/l)*std::exp((xmx-x)/l);
-  }
+  double gaisser_hillas(const double x, const double ecal, const double x0, const double xmax, const double l);
+  double gaisser_hillas(const double* x, const double* p);
 
-  template <typename T>
-  T
-  gaisser_hillas(const T* x, const T* p)
-  {
-    return gaisser_hillas(*x, p[0], p[1], p[2], p[3]);
-  }
+  double usp_function(const double x, const double ecal, const double xmax, const double l, const double r);
+  double usp_function(const double* x, const double* p);
 
   template <typename T>
   unsigned int
