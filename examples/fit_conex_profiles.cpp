@@ -120,7 +120,6 @@
 #include <conex/file.h>
 #include <util/math.h>
 
-TGraph get_dedx_profile(const conex::shower& sh);
 TGraphErrors get_profile_cut(TGraph& g, bool doFluctuate = false);
 
 void four_parameter_fits(TFile& file, int argc, char** argv);
@@ -552,7 +551,7 @@ four_parameter_fits(
     for (auto& shower : cxFile) {
 
       // get the dEdX profile from CONEX
-      dedx = get_dedx_profile(shower);
+      dedx = shower.graph_dedx();
 
       // get a cut of the dEdX profile and the associated "errors"
       profile = get_profile_cut(dedx);
@@ -596,22 +595,6 @@ four_parameter_fits(
   } // loop over the input files
 
   file.Write();
-}
-
-
-
-// build a TGraph with the dEdX profile for the shower
-TGraph
-get_dedx_profile(
-  const conex::shower& sh
-)
-{
-  TGraph g(sh.get_nx() - 1);
-  for (int i = 0; i < sh.get_nx() - 1; ++i) {
-    const double x = 0.5*(sh.get_depths()[i] + sh.get_depths()[i+1]);
-    g.SetPoint(i, x, sh.get_dedx()[i]);
-  }
-  return g;
 }
 
 // create a TGraphErrors with the errors on the y coordinates
