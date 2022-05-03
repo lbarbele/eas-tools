@@ -170,8 +170,6 @@ main(
       // fill the output tree
       tree.Fill();
     }
-
-    break;
   }
 
   file.Write();
