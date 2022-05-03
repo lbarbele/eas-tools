@@ -4,6 +4,8 @@
 #include <cmath>
 #include <vector>
 
+#include <TGraph.h>
+
 #include <util/constants.h>
 #include <util/gaisser_hillas_fit.h>
 
@@ -51,6 +53,9 @@ namespace conex {
     float  EGround[3];
 
   public:
+
+    TGraph graph_dedx() const;
+
     util::gaisser_hillas_fit get_fit() const
     {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}
 
