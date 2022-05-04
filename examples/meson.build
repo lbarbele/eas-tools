@@ -11,7 +11,7 @@ foreach name : example_progs
     include_directories: inc_src,
     cpp_args: cpp_args,
     link_args: ld_args,
-    link_with: [libcorsika, libconex, libconexextensions, libutil],
+    link_with: [libcorsika, libconex, libconexextensions, libutil, libmodels],
     install: true
   )
 endforeach
