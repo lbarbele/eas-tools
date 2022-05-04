@@ -4,5 +4,8 @@ subdir('util')
 # libconex and libconexextensions
 subdir('conex')
 
-#libcorsika
+# libcorsika
 subdir('corsika')
+
+# libmodels
+subdir('models')
