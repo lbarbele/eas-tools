@@ -2,7 +2,8 @@ example_progs = [
   'make_stack',
   'get_alpha',
   'fit_conex_profiles',
-  'fit_conex_anomalous'
+  'fit_conex_anomalous',
+  'select_anomalous'
 ]
 
 foreach name : example_progs
