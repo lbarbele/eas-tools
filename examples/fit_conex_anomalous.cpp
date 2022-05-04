@@ -17,14 +17,7 @@
 
 #include <conex/file.h>
 #include <util/math.h>
-
-enum class particle_id {p = 100, He = 400, C = 1200};
-
-// see the description of these functions below!
-double get_L(const double lgecal, const particle_id id);
-double get_R(const double lgecal, const particle_id id);
-double get_X0(const double lgecal, const particle_id id);
-double get_lambda(const double lgecal, const particle_id id);
+#include <models/dedx_profile.h>
 
 TGraphErrors get_profile_cut(TGraph& g, bool doFluctuate = false);
 
@@ -68,6 +61,12 @@ main(
   ROOT::EnableThreadSafety();
   ROOT::EnableImplicitMT();
 
+  // so we don't have to type the namespaces everytime
+  using models::dedx_profile::get_usp_l;
+  using models::dedx_profile::get_usp_r;
+  using models::dedx_profile::get_gh_x0;
+  using models::dedx_profile::get_gh_lambda;
+
   // the output file
   TFile file("find_anomalous.root", "recreate");
 
@@ -109,18 +108,18 @@ main(
     std::cout << "\r" << ifile << "/" << argc-1 << " " << argv[ifile] << std::endl;
 
     // get id of the primary particle (used to get the parameters)
-    const auto id = static_cast<particle_id>(cxFile.get_header().get_particle());
+    const auto id = cxFile.get_header().get_particle();
 
     // functions used to create the TF1s
     auto single_gh = [=](const double* x, const double* p) {
       const double lgecal = std::log10(p[0]) - 9;
-      const double params[4] = {p[0], get_X0(lgecal, id), p[1], get_lambda(lgecal, id)};
+      const double params[4] = {p[0], get_gh_x0(lgecal, id), p[1], get_gh_lambda(lgecal, id)};
       return util::math::gaisser_hillas(x, params);
     };
 
     auto single_usp = [=](const double* x, const double* p) {
       const double lgecal = std::log10(p[0]) - 9;
-      const double params[4] = {p[0], p[1], get_L(lgecal, id), get_R(lgecal, id)};
+      const double params[4] = {p[0], p[1], get_usp_l(lgecal, id), get_usp_r(lgecal, id)};
       return util::math::usp_function(x, params);
     };
 
@@ -235,76 +234,4 @@ get_profile_cut(
   } else {
     return TGraphErrors(npt, x+ifirst, first, nullptr, v);
   }
-}
-
-// ! parametrization of GH and USP function parameters
-// these parametrizations were obtained using the tool fit_conex_profiles (see the 
-// cpp file for details) using 120000 showers for each primary simulated with 
-// sibyll 2.3d. The energy range of the simulations is 10^17 to 10^20 eV.
-double
-get_L(
-  const double lgecal,
-  const particle_id id
-)
-{
-  switch (id) {
-    case particle_id::p:
-      return 227.183 + lgecal*(7.1665 + 0.950551*lgecal);
-    case particle_id::He:
-      return 229.021 + lgecal*(5.90094 + 0.523577*lgecal);
-    case particle_id::C:
-      return 228.763 + lgecal*(5.09137 + 0.366554*lgecal);
-  }
-  return 0;
-}
-
-double
-get_R(
-  const double lgecal,
-  const particle_id id
-)
-{
-  switch (id) {
-    case particle_id::p:
-      return 0.256203 - lgecal*(0.0299802 - 0.00379108*lgecal);
-    case particle_id::He:
-      return 0.272744 - lgecal*(0.0329877 - 0.00371185*lgecal);
-    case particle_id::C:
-      return 0.290858 - lgecal*(0.0362762 - 0.00336855*lgecal);
-  }
-  return 0;
-}
-
-double
-get_X0(
-  const double lgecal,
-  const particle_id id
-)
-{
-  switch (id) {
-    case particle_id::p:
-      return -122.225 - lgecal*(69.6578 + 4.57977*lgecal);
-    case particle_id::He:
-      return -112.308 - lgecal*(60.9803 + 4.84916*lgecal);
-    case particle_id::C:
-      return -89.7777 - lgecal*(53.2338 + 7.11282*lgecal);
-  }
-  return 0;
-}
-
-double
-get_lambda(
-  const double lgecal,
-  const particle_id id
-)
-{
-  switch (id) {
-    case particle_id::p:
-      return 58.7702 - lgecal*(4.95382 - 0.880473*lgecal);
-    case particle_id::He:
-      return 62.7939 - lgecal*(5.91256 - 0.770987*lgecal);
-    case particle_id::C:
-      return 66.6921 - lgecal*(6.70239 - 0.625783*lgecal);
-  }
-  return 0;
 }
