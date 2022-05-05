@@ -3,7 +3,8 @@ example_progs = [
   'get_alpha',
   'fit_conex_profiles',
   'fit_conex_anomalous',
-  'select_anomalous'
+  'select_anomalous',
+  'plot_conex_profiles'
 ]
 
 foreach name : example_progs
