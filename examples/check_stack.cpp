@@ -90,8 +90,13 @@ main(
       return 1;
     }
 
+    // get the mass
+    const double& m = secpar[0] > 200?
+      secpar[0]/100 * masses.at(13) : 
+      masses.at(int(secpar[0]));
+
     // check gamma factor
-    if (secpar[1] < 1 && secpar[0] != 1) {
+    if (secpar[1] < 1 && m != 0) {
       std::cout << "check_stack: bad gamma in " << argv[1] << std::endl;
       return 1;
     }
@@ -133,9 +138,6 @@ main(
     }
 
     // accumulators
-    const double& m = secpar[0] > 200?
-      secpar[0]/100 * masses.at(13) : 
-      masses.at(int(secpar[0]));
 
     const double& gamma = secpar[1];
     const double e = m > 0? m*gamma : gamma;
