@@ -1,5 +1,6 @@
 example_progs = [
   'make_stack',
+  'check_stack',
   'get_alpha',
   'fit_conex_profiles',
   'fit_conex_anomalous',
