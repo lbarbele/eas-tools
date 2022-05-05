@@ -5,6 +5,7 @@
 #include <list>
 #include <algorithm>
 #include <cctype>
+#include <regex>
 
 #include <conex/file.h>
 #include <conex/extensions/file.h>
@@ -33,13 +34,6 @@ stack_t makeStack(cx::shower& shower, ext::event& event, const double threshold)
 bool compare(const ext::projectile& mother, const ext::particle& child, const ext::projectile& proj);
 // convert CONEX (NEXUS) particle ID to CORSIKA ID
 int idToCorsika(const int id);
-
-/* shower with "low" energy and good anomalous profiles
- * 17.004316 anom_sibyll23d_123484683_100.root
- * 17.010828 anom_sibyll23d_008556812_100.root
- * 17.037121 anom_sibyll23d_179126002_100.root
- * 17.048225 anom_sibyll23d_248918351_100.root
-*/
 
 int
 main(
@@ -70,11 +64,19 @@ main(
 
   // get the event number
   const std::string str = argv[3];
-  if (!std::all_of(str.begin(),str.end(),::isdigit)) {
-    std::cerr << "bad event nubmer" << std::endl;
+  if (!std::regex_match(str, std::regex("[-+]?[0-9]+"))) {
+    std::cerr << "bad event nubmer " << str << std::endl;
     return 1;
   }
-  const uint ievent = std::stoi(argv[3]);
+
+  const int offset = std::stoi(argv[3]);
+
+  if (offset >= cxFile.get_n_showers() || offset+cxFile.get_n_showers() < 0) {
+    std::cerr << "event number is larger than the number of events" << std::endl;
+    return 1;
+  } 
+
+  const uint ievent = offset > 0? offset : cxFile.get_n_showers() + offset;
   
   if (ievent >= extFile.get_n_events()) {
     std::cerr << "event number is larger than the number of events" << std::endl;
@@ -85,9 +87,10 @@ main(
   auto shower = cxFile.get_shower(ievent);
   auto event = extFile.get_event(ievent);
 
-  // actually create the stack
+  // create the stack
   auto stack = makeStack(shower, event, 0.005);
 
+  // check the stack
   if (stack.empty()) {
     std::cerr << "failed to create the stack. it is empty!" << std::endl;
     return 1;
@@ -99,6 +102,7 @@ main(
   // - first interaction altitude [cm]
   // - zenith angle of shower axis [deg]
   // - azimuth angle of shower axis [deg]
+  // the first three fields are intented to be used in the corsika input data cards
   std::cout
     << std::setw(13) << stack.size()
     << std::setw(13) << shower.get_energy_gev()
@@ -108,7 +112,7 @@ main(
     << std::endl;
 
   // print all particles in the stack
-  for (auto secpar : stack) {
+  for (auto& secpar : stack) {
     std::cout << secpar << std::endl;
   }
 
