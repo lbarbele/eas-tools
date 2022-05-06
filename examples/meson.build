@@ -5,7 +5,8 @@ example_progs = [
   'fit_conex_profiles',
   'fit_conex_anomalous',
   'select_anomalous',
-  'plot_conex_profiles'
+  'plot_conex_profiles',
+  'plot_corsika_profiles'
 ]
 
 foreach name : example_progs
