@@ -24,6 +24,7 @@ main(
       auto dedx = profile.get(corsika::profile::type::dedx_sum);
 
       TGraph g(depths.size()-2, &depths[0], &dedx[0]);
+      g.SetTitle(argv[ifile]);
       g.Draw("al");
       g.SetLineWidth(2);
       g.SetLineColor(kBlue+4);
