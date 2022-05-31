@@ -5,7 +5,7 @@
  * This program will take as argument a list of files produced by CONEX
  * and fit the dEdX profiles of the corresponding simulations. Fits are
  * performed both using the usual Gaisser-Hillas function and also the
- * slightly different USP profile. Note that, instead of the typical
+ * (equivalent) USP profile. Note that, instead of the typical
  * "Nmax" parameter, we use the calorimetric energy in both fits.
  * 
  * After performing a first fit of both functions using all their four
@@ -25,7 +25,7 @@
  * other two parameters being given by the value of Ecal.
  * 
  * The intent is to select, between the USP and Gaisser-Hillas functions,
- * the one that best describe the shower profiles after the parameters
+ * the one that best describes the shower profiles after the parameters
  * have been parametrized.
  * 
  * The parametrizations are all performed as a second degree polynomial
