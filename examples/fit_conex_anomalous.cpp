@@ -400,7 +400,7 @@ main(
 
     // print progress / check if file is open (skip if file is bad)
     std::cout << "\r" << ifile+1 << "/" << inputFilesTree.GetEntries() << " " << fileName;
-    if (maxShowers != 0 && totalShowers > maxShowers) {
+    if (maxShowers != 0 && totalShowers >= maxShowers) {
       std::cout << " (skipped)" << std::endl;
       continue;
     } else if (!cxFile.is_open()) {
