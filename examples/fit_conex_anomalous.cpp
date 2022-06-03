@@ -1,56 +1,259 @@
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 #include <random>
 #include <cmath>
 #include <array>
+#include <vector>
+#include <list>
 
 #include <TGraph.h>
 #include <TGraphErrors.h>
 #include <TF1.h>
-#include <TCanvas.h>
 #include <TFile.h>
 #include <TTree.h>
 #include <TFitResult.h>
 #include <TString.h>
 #include <TSystem.h>
+#include <TAxis.h>
+#include <TFitResultPtr.h>
+#include <TCanvas.h>
 #include <TROOT.h>
 
 #include <conex/file.h>
 #include <util/math.h>
 #include <models/dedx_profile.h>
 
-TGraphErrors get_profile_cut(TGraph& g, bool doFluctuate = false);
+// ! helper functions (see definition below)
+TGraphErrors getProfileCut(TGraph& g, bool doFluctuate = false);
 
-template <int NPar>
-struct FitData {
-  double params[NPar];
-  double errors[NPar];
-  double chi2;
-  unsigned int status;
+// ! Fit classes used in the main function
+// ? The purpose of these classes is to encapsulate:
+// ? - the fitted function
+// ? - the fit method
+// ? - the resulting fit data, which will go to the output tree
+
+// ? Virtual base class for the fitter classes
+// * Implements the FitData structure, to be saved in a TTree object
+// * Constructs the base TF1
+// * Implements a Fit method
+// * Implements a GetLeaves, returning a list of leaves of the fFitData
+// * Defines the virtual operator(), the function used by the TF1 base
+template<unsigned int NPar>
+class VFitter : public TF1 {
+private:
+  struct {
+    double params[NPar];
+    double errors[NPar];
+    double chi2;
+    unsigned int status;
+  } fFitData;
+
+public:
+  VFitter() : TF1("", this, &VFitter::operator(), 0., 2000., NPar)
+  {}
+
+  virtual ~VFitter() {};
+
+  auto Data()
+  {
+    return reinterpret_cast<void*>(&fFitData);
+  }
+
+  std::string GetLeaves()
+  {
+    std::string leaves;
+    for (unsigned int i = 0; i < NPar; ++i) {
+      leaves += GetParName(i);
+      leaves += "/D:";
+    }
+    for (unsigned int i = 0; i < NPar; ++i) {
+      leaves += GetParName(i);
+      leaves += "Err/D:";
+    }
+    leaves += "chi2/D:";
+    leaves += "status/i";
+    return leaves;
+  }
+
+  TFitResultPtr Fit(
+    TGraphErrors& profile,
+    const double min,
+    const double max,
+    const std::vector<double>& params = std::vector<double>(),
+    int tries = 1
+  )
+  {
+    TFitResultPtr result;
+
+    // reset the function range
+    SetRange(min, max);
+
+    // if parameter estimates were given, read them
+    if (params.size() == NPar) {
+      SetParameters(params.data());
+    }
+
+    // try to fit until status is 0 or max tries is reached
+    do {
+      result = profile.Fit(this, "SQN", "", min, max);
+    } while(--tries > 0 && result->Status() != 0);
+
+    // copy the fit data to the fFitData structure
+    for (unsigned int ipar = 0; ipar < NPar; ++ipar) {
+      fFitData.params[ipar] = GetParameter(ipar);
+      fFitData.errors[ipar] = GetParError(ipar);
+    }
+
+    // copy status and chi2 do the fFitData structure
+    fFitData.chi2 = result->MinFcnValue();
+    fFitData.status = !result->IsValid();
+
+    // return the fitresult
+    return result;
+  }
+
+  virtual double operator()(const double* x, const double* p) = 0;
 };
 
-template <int NPar>
-FitData<NPar>&
-operator<<(
-  FitData<NPar>& fitData,
-  TFitResult& fitRes
-)
-{
-  if (fitRes.NPar() != NPar) {
-    throw;
+// ? Mixin for adding the mass dependency on the constrained fits
+// * Holds the mass ID in the protected field fMassId
+// * Implements SetMass method to set fMassId
+class IMassDep {
+protected:
+  unsigned int fMassId;
+public:
+  void SetMass(unsigned int id) {fMassId = id;}
+};
+
+// ? Gaisser-Hillas function, uses Ecal instead of Nmax
+// ? Parameters are:
+// * p[0] = Ecal
+// * p[1] = X0
+// * p[2] = Xmax
+// * p[3] = lambda
+struct GHSingleFcn : public VFitter<4> {
+  GHSingleFcn(){
+    SetParNames("ecal", "x0", "xmax", "lambda");
   }
 
-  for (int i = 0; i < NPar; ++i) {
-    fitData.params[i] = fitRes.Parameter(i);
-    fitData.errors[i] = fitRes.Error(i);
+  double operator()(const double* x, const double* p) {
+    return util::math::gaisser_hillas(x, p);
+  }
+};
+
+// ? Double Gaisser-Hillas, also using Ecal instead of Nax
+// ? Parameters are:
+// * p[0] = Ecal
+// * p[1] = weight of the first GH function
+// * p[2] = X0_1
+// * p[3] = Xmax_1
+// * p[4] = lambda_1
+// * p[5] = X0_2
+// * p[6] = Xmax_2
+// * p[7] = lambda_2
+struct GHDoubleFcn : public VFitter<8> {
+  GHDoubleFcn(){
+    SetParNames("ecal", "w", "x0_1", "xmax_1", "lambda_1", "x0_2", "xmax_2", "lambda_2");
   }
 
-  fitData.chi2 = fitRes.MinFcnValue();
-  fitData.status = fitRes.Status();
+  double operator()(const double* x, const double* p) {
+    using util::math::gaisser_hillas;
+    const double& ecal1 = p[0]*p[1];
+    const double& ecal2 = p[0]*(1-p[1]);
+    return gaisser_hillas(*x, ecal1, p[2], p[3], p[4]) + gaisser_hillas(*x, ecal2, p[5], p[6], p[7]);
+  }
+};
 
-  return fitData;
-}
+// ? Six-parameter Gaisser-Hillas function, same as in CONEX
+// ? lambda becomes lambda(X) = p1 + X*(p2 + X*p3)
+// ? Parameters are:
+// * p[0] = ymax (value of the function at maximum)
+// * p[1] = X0
+// * p[2] = Xmax (position of the maximum)
+// * p[3] = p1
+// * p[4] = p2
+// * p[5] = p3
+struct GHSixParamFcn : public VFitter<6> {
+  GHSixParamFcn(){
+    SetParNames("ymax", "x0", "xmax", "p1", "p2", "p3");
+  }
 
+  double operator()(const double* x, const double* p) {
+    const double& depth = *x;
+    const double& max = p[0];
+    const double& x0 = p[1];
+    const double& xmax = p[2];
+    const double lambda = p[3] + depth*(p[4] + depth*p[5]);
+    if (depth <= x0) {
+      return 0;
+    }
+    return max * std::pow((depth-x0)/(xmax-x0), (xmax-x0)/lambda) * std::exp((xmax-depth)/lambda);
+  }
+};
+
+// ? Single Gaisser-Hillas with X0 and lambda fixed
+// ? These two constrained parameters are computed in terms of
+// ? the primary mass (which must be set by calling SetMass)
+// ? and the value of Ecal
+// ? Parameters are:
+// * p[0] = Ecal
+// * p[1] = Xmax
+struct GHSingleConstrainedFcn : public VFitter<2>, public IMassDep {
+  GHSingleConstrainedFcn(){
+    SetParNames("ecal", "xmax");
+  }
+
+  double operator()(const double* x, const double* p) {
+    const double& ecal = p[0];
+    const double& xmax = p[1];
+    const double lgecal = std::log10(ecal) - 9;
+    const double x0 = models::dedx_profile::get_gh_x0(lgecal, fMassId);
+    const double lambda = models::dedx_profile::get_gh_lambda(lgecal, fMassId);
+    return util::math::gaisser_hillas(*x, ecal, x0, xmax, lambda);
+  }
+};
+
+// ? Single Gaisser-Hillas with X0 and lambda fixed
+// ? These two constrained parameters are computed in terms of
+// ? the primary mass (which must be set by calling SetMass)
+// ? and the value of Ecal
+// ? Parameters are:
+// * p[0] = Ecal
+// * p[1] = weight of the first GH function
+// * p[2] = Xmax_1
+// * p[3] = Xmax_2
+struct GHDoubleConstrainedFcn : public VFitter<4>, public IMassDep {
+  GHDoubleConstrainedFcn(){
+    SetParNames("ecal", "w", "xmax_1", "xmax_2");
+  }
+
+  double operator()(const double* x, const double* p) {
+    using util::math::gaisser_hillas;
+    const double& ecal = p[0];
+    const double& w = p[1];
+    const double ecal1 = w*ecal;
+    const double ecal2 = (1-w)*ecal;
+    const double lgecal1 = std::log10(ecal1) - 9;
+    const double lgecal2 = std::log10(ecal2) - 9;
+    const double x0_1 = models::dedx_profile::get_gh_x0(lgecal1, fMassId);
+    const double x0_2 = models::dedx_profile::get_gh_x0(lgecal2, fMassId);
+    const double lambda1 = models::dedx_profile::get_gh_lambda(lgecal1, fMassId);
+    const double lambda2 = models::dedx_profile::get_gh_lambda(lgecal2, fMassId);
+    return gaisser_hillas(*x, ecal1, x0_1, p[2], lambda1) + gaisser_hillas(*x, ecal2, x0_2, p[3], lambda2);
+  }
+};
+
+// ! main function
+// ? loops over input files, which are given through stdin
+// ? fits every shower in these files
+// ? builts a tree containing an entry for each fitted shower with:
+// ? - the corresponding file name
+// ? - the index of the shower inside the file (starting at 0)
+// ? - the log10(E/eV
+// ? - the dEdX profile (TGraph)
+// ? - the number of inflection points on the dEdX profile
+// ? - fitted data for each function
 int
 main(
   int argc,
@@ -61,133 +264,243 @@ main(
   ROOT::EnableThreadSafety();
   ROOT::EnableImplicitMT();
 
+  // disable printout messages from ROOT
+  gErrorIgnoreLevel = kWarning;
+
   // so we don't have to type the namespaces everytime
-  using models::dedx_profile::get_usp_l;
-  using models::dedx_profile::get_usp_r;
   using models::dedx_profile::get_gh_x0;
   using models::dedx_profile::get_gh_lambda;
 
-  // the output file
-  TFile file("find_anomalous.root", "recreate");
+  // * define the max number of tries when a fit fails
+  const unsigned maxTries = 10;
 
-  // the output tree and its branches
-  TTree tree("data", "data");
+  // * parse the command line
+  // possible options are:
+  // --plot <filename> 
+  // --out <filename>
+  std::string plotFileName = "";
+  std::string outFileName = "profileAnalysis.root";
+  unsigned int maxShowers = 0;
+  int iarg = 1;
 
-  TString fileName;
-  TGraph dedx;
-  FitData<2> ghSingleFit;
-  FitData<2> uspSingleFit;
-  FitData<4> ghDoubleFit;
-  FitData<4> uspDoubleFit;
-  unsigned int ninflec = 0;
-  unsigned int ishower = 0;
+  while (iarg < argc) {
+    std::string opt = argv[iarg++];
 
-  tree.Branch("fileName", &fileName);
-  tree.Branch("dedx", &dedx);
-  tree.Branch("ninflec", &ninflec, "ninflec/i");
-  tree.Branch("ishower", &ishower, "ishower/i");
-  tree.Branch("ghSingleFit", &ghSingleFit, "ecal/D:xmax:ecalErr:xmaxErr:chi2:status/i");
-  tree.Branch("uspSingleFit", &uspSingleFit, "ecal/D:xmax:ecalErr:xmaxErr:chi2:status/i");
-  tree.Branch("ghDoubleFit", &ghDoubleFit, "ecal_1/D:xmax_1:ecal_2:xmax_2:ecalErr_1:xmaxErr_1:ecalErr_2:xmaxErr_2:chi2:status/i");
-  tree.Branch("uspDoubleFit", &uspDoubleFit, "ecal_1/D:xmax_1:ecal_2:xmax_2:ecalErr_1:xmaxErr_1:ecalErr_2:xmaxErr_2:chi2:status/i");
-
-  // loop over input files
-  for (int ifile = 1; ifile < argc; ++ifile) {
-
-    // open the conex file and check
-    conex::file cxFile(argv[ifile]);
-    if (!cxFile.is_open()) {
-      std::cout << "bad conex file " << argv[ifile] << std::endl;
-      continue;
+    if (iarg == argc) {
+      std::cerr << "missing parameter for option " << opt << std::endl;
+      return 1;
     }
 
-    // get file name (will go to the tree)
-    fileName = gSystem->BaseName(argv[ifile]);
+    std::string arg = argv[iarg++];
 
-    // show progress
-    std::cout << "\r" << ifile << "/" << argc-1 << " " << argv[ifile] << std::endl;
+    if (opt == "--plot") {
+      plotFileName = arg;
+    } else if (opt == "--out") {
+      outFileName = arg;
+    } else if (opt == "--max-showers") {
+      try {
+        maxShowers = std::stoul(arg);
+      } catch (...) {
+        std::cerr << "bad argument for --max-showers" << std::endl;
+        return 1;
+      }
+    } else {
+      std::cerr << "invalid option " << opt << std::endl;
+      return 1;
+    }
+  }
+
+  // * check the command line
+  const bool doPlots = !plotFileName.empty();
+  if (doPlots && plotFileName.substr(plotFileName.size()-4) != ".pdf") {
+    std::cerr << "bad plot file name " << plotFileName << std::endl;
+    return 1;
+  }
+
+  if (outFileName.substr(outFileName.size()-5) != ".root") {
+    std::cerr << "bad output file name " << outFileName << std::endl;
+    return 1;
+  }
+
+  // * open the output file
+  TFile file(outFileName.c_str(), "recreate");
+
+  // * create the output tree and set its branches
+  TTree dataTree("data", "data");
+
+  unsigned int ifile = 0;
+  unsigned int ishower = 0;
+  unsigned int ninflec = 0;
+  double lgE = 0;
+  TGraph dedx;
+
+  GHSingleFcn ghSingleFit;
+  GHDoubleFcn ghDoubleFit;
+  GHSingleConstrainedFcn ghSingleConstrainedFit;
+  GHDoubleConstrainedFcn ghDoubleConstrainedFit;
+  GHSixParamFcn ghSixParFit;
+
+  dataTree.Branch("ifile", &ifile, "ifile/i");
+  dataTree.Branch("ishower", &ishower, "ishower/i");
+  dataTree.Branch("lgE", &lgE, "lgE/D");
+  dataTree.Branch("dedx", &dedx);
+  dataTree.Branch("ninflec", &ninflec, "ninflec/i");
+
+  dataTree.Branch("ghSingleFit", ghSingleFit.Data(), ghSingleFit.GetLeaves().c_str());
+  dataTree.Branch("ghDoubleFit", ghDoubleFit.Data(), ghDoubleFit.GetLeaves().c_str());
+  dataTree.Branch("ghSingleConstrainedFit", ghSingleConstrainedFit.Data(), ghSingleConstrainedFit.GetLeaves().c_str());
+  dataTree.Branch("ghDoubleConstrainedFit", ghDoubleConstrainedFit.Data(), ghDoubleConstrainedFit.GetLeaves().c_str());
+  dataTree.Branch("ghSixParFit", ghSixParFit.Data(), ghSixParFit.GetLeaves().c_str());
+
+  // * write a tree with the names of the input files
+  TTree inputFilesTree("inputFiles", "inputFiles");
+  TString fileName;
+  inputFilesTree.Branch("fileName", &fileName);
+  while (std::cin >> fileName) {
+    inputFilesTree.Fill();
+  }
+
+  // * start the output canvas
+  TCanvas canvas;
+  if (doPlots) {
+    canvas.Print((plotFileName + '[').c_str());
+  }
+
+  // * loop over input files
+  unsigned int totalShowers = 0;
+  for (ifile = 0; ifile < inputFilesTree.GetEntries(); ++ifile) {
+    inputFilesTree.GetEntry(ifile);
+
+    // try to open the conex file (check below)
+    conex::file cxFile(fileName.Data());
+
+    // print progress
+    std::cout << "\r" << ifile+1 << "/" << inputFilesTree.GetEntries() << " " << fileName;
+    if (maxShowers != 0 && totalShowers > maxShowers) {
+      std::cout << " (skipped)" << std::endl;
+      continue;
+    } else if (!cxFile.is_open()) {
+      // skip bad conex files
+      std::cout << " (bad)" << std::endl;
+      continue;
+    } else {
+      std::cout << std::endl;
+    }
+
+    // get basename of the current file (will go to the output tree)
+    fileName = gSystem->BaseName(fileName);
 
     // get id of the primary particle (used to get the parameters)
     const auto id = cxFile.get_header().get_particle();
 
-    // functions used to create the TF1s
-    auto single_gh = [=](const double* x, const double* p) {
-      const double lgecal = std::log10(p[0]) - 9;
-      const double params[4] = {p[0], get_gh_x0(lgecal, id), p[1], get_gh_lambda(lgecal, id)};
-      return util::math::gaisser_hillas(x, params);
-    };
-
-    auto single_usp = [=](const double* x, const double* p) {
-      const double lgecal = std::log10(p[0]) - 9;
-      const double params[4] = {p[0], p[1], get_usp_l(lgecal, id), get_usp_r(lgecal, id)};
-      return util::math::usp_function(x, params);
-    };
-
-    auto double_gh = [&](const double*x, const double* p) {
-      return single_gh(x, p) + single_gh(x, p+2);
-    };
-
-    auto double_usp = [&](const double*x, const double* p) {
-      return single_usp(x, p) + single_usp(x, p+2);
-    };
+    // set mass ID for the constrained fits
+    ghSingleConstrainedFit.SetMass(id);
+    ghDoubleConstrainedFit.SetMass(id);
 
     // loop over showers in the current file
-    for (ishower = 0; ishower < cxFile.get_n_showers(); ++ishower) {
+    for (ishower = 0; ishower < cxFile.get_n_showers() && (maxShowers == 0 || totalShowers < maxShowers); ++ishower, ++totalShowers) {
       auto shower = cxFile.get_shower(ishower);
 
-      // get the dEdX profile from CONEX
+      // * data that will be forwarded to the output tree
+      // the dEdX profile from CONEX
       dedx = shower.graph_dedx();
+      // log10 of the primary energy in eV
+      lgE = shower.get_lge();
 
-      // get a cut of the dEdX profile and the associated "errors"
-      auto profile = get_profile_cut(dedx);
+      // * get a cut of the dEdX profile and the associated "errors"
+      auto profile = getProfileCut(dedx);
 
-      // estimates for the calorimentric energy and Xmax
-      const int imax = std::max_element(profile.GetY(), profile.GetY()+profile.GetN()) - profile.GetY();
-      const double ecal = profile.Integral();
-      const double xmax = profile.GetX()[imax];
+      // * count the number of inflection points on the profile
+      ninflec = util::math::count_inflection_points(profile.GetY(), profile.GetN(), 5);
 
-      // min/max depth values
+      // * min/max depth values
       const double min = profile.GetX()[0];
       const double max = profile.GetX()[profile.GetN()-1];
 
-      // gaisser-hillas
-      TF1 ghSingleFcn("", single_gh, min, max, 2);
-      ghSingleFcn.SetParameters(ecal, xmax);
-      ghSingleFit << *profile.Fit(&ghSingleFcn, "SQN");
+      // * parameter estimates
+      // calorimetric energy: use integral of the dEdX profile
+      const double ecal = dedx.Integral();
+      const double lgecal = std::log10(ecal) - 9;
+      // xmax: read from CONEX's six-parameter fit
+      const double xmax = shower.get_xmax();
+      // x0 and lambda: use our parametrization in terms of ecal
+      const double x0 = get_gh_x0(lgecal, id);
+      const double lambda = get_gh_lambda(lgecal, id);
+      // parameters for the six-param. fit: read from CONEX
+      const double x0six = shower.get_x0();
+      const double dedxmx = shower.get_dedx_mx();
+      const double p1 = shower.get_p1();
+      const double p2 = shower.get_p2();
+      const double p3 = shower.get_p3();
+      // weight of the double Gaisser-Hillas: use 1/2
+      const double w = 0.5;
+      // xmax of the double Gaisser-Hillas: use +- 200 g/cm^2 around xmax
+      const double xmax_1 = xmax-200;
+      const double xmax_2 = xmax+200;
 
-      TF1 ghDoubleFcn("", double_gh, min, max, 4);
-      ghDoubleFcn.SetParameters(0.5*ecal, xmax-200, 0.5*ecal, xmax+200);
-      ghDoubleFit << *profile.Fit(&ghDoubleFcn, "SQN");
+      // * perform the fits
+      ghSingleFit.Fit(profile, min, max, {ecal, x0, xmax, lambda}, maxTries);
+      ghDoubleFit.Fit(profile, min, max, {ecal, w, x0, xmax_1, lambda, x0, xmax_2, lambda}, maxTries);
+      ghSixParFit.Fit(profile, min, max, {dedxmx, x0six, xmax, p1, p2, p3}, maxTries);
+      ghSingleConstrainedFit.Fit(profile, min, max, {ecal, xmax}, maxTries);
+      ghDoubleConstrainedFit.Fit(profile, min, max, {ecal, w, xmax_1, xmax_2}, maxTries);
 
-      // usp
-      TF1 uspSingleFcn("", single_usp, min, max, 2);
-      uspSingleFcn.SetParameters(ecal, xmax);
-      uspSingleFit << *profile.Fit(&uspSingleFcn, "SQN");
+      // * draw
+      if (doPlots) {
+        TGraph graph;
+        graph.SetPoint(0, 0, 0);
+        for (int i = 0; i < dedx.GetN(); ++i) {
+          graph.SetPoint(graph.GetN(), dedx.GetX()[i], dedx.GetY()[i]);
+        }
+        graph.SetPoint(graph.GetN(), dedx.GetX()[dedx.GetN()-1], 0);
+        graph.SetFillColorAlpha(kBlack, 0.2);
+        graph.Draw("af");
 
-      TF1 uspDoubleFcn("", double_usp, min, max, 4);
-      uspDoubleFcn.SetParameters(0.5*ecal, xmax-200, 0.5*ecal, xmax+200);
-      uspDoubleFit << *profile.Fit(&uspDoubleFcn, "SQN");
+        ghSingleConstrainedFit.SetLineColorAlpha(kRed, 0.7);
+        ghSingleConstrainedFit.Draw("same l");
 
-      // count the number of inflection points on the profile
-      ninflec = util::math::count_inflection_points(profile.GetY(), profile.GetN(), 5);
+        ghDoubleConstrainedFit.SetLineColorAlpha(kRed, 0.7);
+        ghDoubleConstrainedFit.SetLineStyle(kDashed);
+        ghDoubleConstrainedFit.Draw("same l");
 
-      // fill the output tree
-      tree.Fill();
+        ghSingleFit.SetLineColorAlpha(kBlue, 0.7);
+        ghSingleFit.Draw("same l");
+
+        ghDoubleFit.SetLineColorAlpha(kBlue, 0.7);
+        ghDoubleFit.SetLineStyle(kDashed);
+        ghDoubleFit.Draw("same l");
+
+        ghSixParFit.SetMarkerColorAlpha(kGreen, 0.7);
+        ghSixParFit.SetMarkerStyle(kOpenCircle);
+        ghSixParFit.SetMarkerSize(0.5);
+        ghSixParFit.SetNpx(100);
+        ghSixParFit.Draw("same p");
+
+        canvas.Print(plotFileName.c_str());
+      }
+
+      // * fill the output tree
+      dataTree.Fill();
     }
   }
 
+  // * write tree buffer to the output file
   file.Write();
+
+  // * close the output canvas
+  if (doPlots) {
+    canvas.Print((plotFileName + ']').c_str());
+  }
 
   return 0;
 }
 
-
-// create a TGraphErrors with the errors on the y coordinates
-// following the procedure of arXiv:1111.0504. Optionally,
-// each point can be fluctuated in the same manner as in this
-// reference (set doFluctuate to true)
+// ? getProfileCut: create a TGraphErrors with the errors on the
+// ? y coordinates following the procedure of arXiv:1111.0504.
+// ? Optionally, each point can be fluctuated in the same manner
+// ? as in this reference (set doFluctuate to true)
 TGraphErrors
-get_profile_cut(
+getProfileCut(
   TGraph& g,
   bool doFluctuate
 )
