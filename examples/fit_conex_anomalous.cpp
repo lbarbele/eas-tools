@@ -1,4 +1,45 @@
-
+/*
+ * fit_conex_anomalous.cpp
+ * last update: 03-06-2022
+ * 
+ * This programs takes as input (from stdin) a list of CONEX simulations
+ * and will try to fit the dEdX profiles of each shower in these files.
+ * The fits are produced in five different variations of the usual
+ * Gaisser-Hillas function. Namely:
+ * 
+ * a) Gaisser-Hillas function, with the calorimetric energy as a
+ *    free parameter
+ * 
+ *      dEdX(X) = Ecal * z^(alpha-1) * exp(-z) / (lambda*Gamma(alpha))
+ *            z = (X - X0) / lambda
+ *    alpha - 1 = (Xmax - X0) / lambda
+ * 
+ * b) Gaisser-Hillas function, but constraining X0 and lambda to
+ *    a parametrization as a function of Ecal (see models/dedx_profile.h)
+ *    The parametrizations consider also the mass dependency
+ * 
+ * c) Six-parameter Gaisser-Hillas function, same as in CONEX. In this
+ *    case, the amplitude parameter is dEdX_mx, not Ecal, because there
+ *    is no closed form expression to our function. The functional form
+ *    is:
+ * 
+ *      dEdX(X) = dEdX_mx *
+ *                ((X-X0)/(Xmax-X0))^((Xmax-X0)/lambda(X)) *
+ *                exp((Xmax-X)/lambda(X))
+ * 
+ *    lambda(X) = p1 + p2 * X + p3 * X * X
+ * 
+ * d) Double Gaisser-Hillas, meaning a weighted sum of two Gaisser-Hillas
+ *    functions
+ * 
+ *    dEdX(X) = w*dEdX_1(X, Ecal) + (1-w)*dEdX_2(X, Ecal)
+ * 
+ * e) Double Gaisser-Hillas, same as above, but with X0 and lambda
+ *    constrained to the parametrized values.
+ *  
+ * For details on the fitting functions, see the fitter classes below.
+ * 
+ */
 #include <iomanip>
 #include <algorithm>
 #include <random>
