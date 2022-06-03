@@ -1,24 +1,31 @@
 /*
- * fit_conex_anomalous.cpp
- * last update: 03-06-2022
- * 
+ ! fit_conex_anomalous.cpp
+ ! last update: 03-06-2022
+ *
  * This programs takes as input (from stdin) a list of CONEX simulations
  * and will try to fit the dEdX profiles of each shower in these files.
  * The fits are produced in five different variations of the usual
  * Gaisser-Hillas function. Namely:
+ *
  * 
- * a) Gaisser-Hillas function, with the calorimetric energy as a
- *    free parameter
+ ? a) Gaisser-Hillas function
+ *    Usual Gaisser-Hillas profile, but using the calorimetric energy as
+ *    a free parameter, instead of the standard "Nmax". The functional
+ *    form is:
  * 
  *      dEdX(X) = Ecal * z^(alpha-1) * exp(-z) / (lambda*Gamma(alpha))
  *            z = (X - X0) / lambda
  *    alpha - 1 = (Xmax - X0) / lambda
  * 
- * b) Gaisser-Hillas function, but constraining X0 and lambda to
- *    a parametrization as a function of Ecal (see models/dedx_profile.h)
- *    The parametrizations consider also the mass dependency
  * 
- * c) Six-parameter Gaisser-Hillas function, same as in CONEX. In this
+ ? b) Constrained Gaisser-Hillas function
+ *    Same as (a), but constraining X0 and lambda to average values. Those
+ *    are parametrized as a function of Ecal (see models/dedx_profile.h)
+ *    The parametrizations consider also the mass dependency.
+ * 
+ * 
+ ? c) Six-parameter Gaisser-Hillas function
+ *    This is the same Gaisser-Hillas function used in CONEX. In this
  *    case, the amplitude parameter is dEdX_mx, not Ecal, because there
  *    is no closed form expression to our function. The functional form
  *    is:
@@ -29,15 +36,69 @@
  * 
  *    lambda(X) = p1 + p2 * X + p3 * X * X
  * 
- * d) Double Gaisser-Hillas, meaning a weighted sum of two Gaisser-Hillas
- *    functions
+ * 
+ ? d) Double Gaisser-Hillas
+ *    This is a weighted sum of two Gaisser-Hillas functions.
  * 
  *    dEdX(X) = w*dEdX_1(X, Ecal) + (1-w)*dEdX_2(X, Ecal)
  * 
- * e) Double Gaisser-Hillas, same as above, but with X0 and lambda
- *    constrained to the parametrized values.
+ * 
+ ? e) Constrained double Gaisser-Hillas
+ *    Same as above, but with X0 and lambda constrained to their average
+ *    values, just as in case (b).
  *  
  * For details on the fitting functions, see the fitter classes below.
+ *
+ *
+ ! Syntax, options and input format
+ * 
+ * The program takes as input a list of CONEX files from stdin
+ * 
+ * find path/to/conex/files -name 'conex*.root | fit_conex_anomalous [options]
+ * 
+ * where the options are:
+ * 
+ * --plot file.pdf : plots fitted profiles into the specified file
+ * --out file.root : sets the output file name (default is profileAnalysis.root)
+ * --max-showers n : stop processing after n showers have been processed
+ * 
+ * 
+ ! Root output files
+ *
+ * The main output of this program is a root file containing two trees: one with
+ * the names of the files that have been processed and, the main one, with data
+ * from the fitted profiles.
+ * 
+ * 
+ ? "inputFiles" tree
+ *
+ * This tree contains a single branch called "fileName" of type TString. One entry
+ * is produced for each file that have been processed, even if it has been skipped
+ * due to the max-showers cutoff.
+ * 
+ * 
+ ? "data" tree
+ * 
+ * The contains one entry for each processed shower and is structured in the
+ * following branches:
+ * 
+ * - ifile (unsigned int): contains the index to get the corresponding file name
+ *   from the "inputFiles" tree
+ * 
+ * - ishower (unsigned int): contains the shower number (starting from 0) of the
+ *   shower in the input file
+ * 
+ * - lgE (double): base-10 logarithm of the primary energy in eV
+ * 
+ * - dedx (TGraph): fitted dEdX profile, a simple copy from the CONEX file
+ * 
+ * - ninflec (unsigned int): count of inflection points in the dEdX profile
+ * 
+ * - ghSingleFit (struct): corresponds to the function (a) (see above)
+ * - ghDoubleFit (struct): corresponds to the function (d) (see above)
+ * - ghSingleConstrainedFit (struct): corresponds to the function (b) (see above)
+ * - ghDoubleConstrainedFit (struct): corresponds to the function (e) (see above)
+ * - ghSixParFit (struct): corresponds to the function (c) (see above)
  * 
  */
 #include <iomanip>
@@ -343,9 +404,6 @@ main(
   const unsigned maxTries = 10;
 
   // * parse the command line
-  // possible options are:
-  // --plot <filename> 
-  // --out <filename>
   std::string plotFileName = "";
   std::string outFileName = "profileAnalysis.root";
   unsigned int maxShowers = 0;
