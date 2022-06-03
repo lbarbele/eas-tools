@@ -1,4 +1,4 @@
-#include <iostream>
+
 #include <iomanip>
 #include <algorithm>
 #include <random>
@@ -49,11 +49,19 @@ private:
     unsigned int status;
   } fFitData;
 
+protected:
+  std::string fDrawOpt;
+
 public:
   VFitter() : TF1("", this, &VFitter::operator(), 0., 2000., NPar)
   {}
 
   virtual ~VFitter() {};
+
+  void Draw()
+  {
+    TF1::Draw(fDrawOpt.c_str());
+  }
 
   auto Data()
   {
@@ -135,6 +143,8 @@ public:
 struct GHSingleFcn : public VFitter<4> {
   GHSingleFcn(){
     SetParNames("ecal", "x0", "xmax", "lambda");
+    SetLineColorAlpha(kBlue, 0.7);
+    fDrawOpt = "same l";
   }
 
   double operator()(const double* x, const double* p) {
@@ -155,6 +165,9 @@ struct GHSingleFcn : public VFitter<4> {
 struct GHDoubleFcn : public VFitter<8> {
   GHDoubleFcn(){
     SetParNames("ecal", "w", "x0_1", "xmax_1", "lambda_1", "x0_2", "xmax_2", "lambda_2");
+    SetLineColorAlpha(kBlue, 0.7);
+    SetLineStyle(kDashed);
+    fDrawOpt = "same l";
   }
 
   double operator()(const double* x, const double* p) {
@@ -177,6 +190,11 @@ struct GHDoubleFcn : public VFitter<8> {
 struct GHSixParamFcn : public VFitter<6> {
   GHSixParamFcn(){
     SetParNames("ymax", "x0", "xmax", "p1", "p2", "p3");
+    SetMarkerColorAlpha(kGreen, 0.7);
+    SetMarkerStyle(kOpenCircle);
+    SetMarkerSize(0.5);
+    SetNpx(100);
+    fDrawOpt = "same p";
   }
 
   double operator()(const double* x, const double* p) {
@@ -202,6 +220,8 @@ struct GHSixParamFcn : public VFitter<6> {
 struct GHSingleConstrainedFcn : public VFitter<2>, public IMassDep {
   GHSingleConstrainedFcn(){
     SetParNames("ecal", "xmax");
+    SetLineColorAlpha(kRed, 0.7);
+    fDrawOpt = "same l";
   }
 
   double operator()(const double* x, const double* p) {
@@ -226,6 +246,9 @@ struct GHSingleConstrainedFcn : public VFitter<2>, public IMassDep {
 struct GHDoubleConstrainedFcn : public VFitter<4>, public IMassDep {
   GHDoubleConstrainedFcn(){
     SetParNames("ecal", "w", "xmax_1", "xmax_2");
+    SetLineColorAlpha(kRed, 0.7);
+    SetLineStyle(kDashed);
+    fDrawOpt = "same l";
   }
 
   double operator()(const double* x, const double* p) {
@@ -241,6 +264,30 @@ struct GHDoubleConstrainedFcn : public VFitter<4>, public IMassDep {
     const double lambda1 = models::dedx_profile::get_gh_lambda(lgecal1, fMassId);
     const double lambda2 = models::dedx_profile::get_gh_lambda(lgecal2, fMassId);
     return gaisser_hillas(*x, ecal1, x0_1, p[2], lambda1) + gaisser_hillas(*x, ecal2, x0_2, p[3], lambda2);
+  }
+};
+
+// ! the output canvas
+class ProfileCanvas : public TCanvas {
+private:
+  std::string fName;
+public:
+  ProfileCanvas(const std::string& name) : fName(name) {
+    if (!fName.empty()) {
+      TCanvas::Print((fName + "[").c_str());
+    }
+  }
+
+  ~ProfileCanvas() {
+    if (!fName.empty()) {
+      TCanvas::Print((fName + "]").c_str());
+    }
+  }
+
+  void Print() {
+    if (!fName.empty()) {
+      TCanvas::Print(fName.c_str());
+    }
   }
 };
 
@@ -360,11 +407,8 @@ main(
     inputFilesTree.Fill();
   }
 
-  // * start the output canvas
-  TCanvas canvas;
-  if (doPlots) {
-    canvas.Print((plotFileName + '[').c_str());
-  }
+  // * create the output canvas (only if plotFileName is not empty)
+  ProfileCanvas canvas(plotFileName);
 
   // * loop over input files
   unsigned int totalShowers = 0;
@@ -374,21 +418,17 @@ main(
     // try to open the conex file (check below)
     conex::file cxFile(fileName.Data());
 
-    // print progress
+    // print progress / check if file is open (skip if file is bad)
     std::cout << "\r" << ifile+1 << "/" << inputFilesTree.GetEntries() << " " << fileName;
     if (maxShowers != 0 && totalShowers > maxShowers) {
       std::cout << " (skipped)" << std::endl;
       continue;
     } else if (!cxFile.is_open()) {
-      // skip bad conex files
       std::cout << " (bad)" << std::endl;
       continue;
     } else {
       std::cout << std::endl;
     }
-
-    // get basename of the current file (will go to the output tree)
-    fileName = gSystem->BaseName(fileName);
 
     // get id of the primary particle (used to get the parameters)
     const auto id = cxFile.get_header().get_particle();
@@ -447,36 +487,19 @@ main(
 
       // * draw
       if (doPlots) {
-        TGraph graph;
-        graph.SetPoint(0, 0, 0);
-        for (int i = 0; i < dedx.GetN(); ++i) {
-          graph.SetPoint(graph.GetN(), dedx.GetX()[i], dedx.GetY()[i]);
-        }
+        TGraph graph = dedx;
         graph.SetPoint(graph.GetN(), dedx.GetX()[dedx.GetN()-1], 0);
+        graph.SetPoint(graph.GetN(), 0, 0);
         graph.SetFillColorAlpha(kBlack, 0.2);
         graph.Draw("af");
 
-        ghSingleConstrainedFit.SetLineColorAlpha(kRed, 0.7);
-        ghSingleConstrainedFit.Draw("same l");
+        ghSingleConstrainedFit.Draw();
+        ghDoubleConstrainedFit.Draw();
+        ghSingleFit.Draw();
+        ghDoubleFit.Draw();
+        ghSixParFit.Draw();
 
-        ghDoubleConstrainedFit.SetLineColorAlpha(kRed, 0.7);
-        ghDoubleConstrainedFit.SetLineStyle(kDashed);
-        ghDoubleConstrainedFit.Draw("same l");
-
-        ghSingleFit.SetLineColorAlpha(kBlue, 0.7);
-        ghSingleFit.Draw("same l");
-
-        ghDoubleFit.SetLineColorAlpha(kBlue, 0.7);
-        ghDoubleFit.SetLineStyle(kDashed);
-        ghDoubleFit.Draw("same l");
-
-        ghSixParFit.SetMarkerColorAlpha(kGreen, 0.7);
-        ghSixParFit.SetMarkerStyle(kOpenCircle);
-        ghSixParFit.SetMarkerSize(0.5);
-        ghSixParFit.SetNpx(100);
-        ghSixParFit.Draw("same p");
-
-        canvas.Print(plotFileName.c_str());
+        canvas.Print();
       }
 
       // * fill the output tree
@@ -486,11 +509,6 @@ main(
 
   // * write tree buffer to the output file
   file.Write();
-
-  // * close the output canvas
-  if (doPlots) {
-    canvas.Print((plotFileName + ']').c_str());
-  }
 
   return 0;
 }
