@@ -4,7 +4,6 @@
 
 namespace util::math {
 
-  // gaisser-hillas function: explicit parameters
   double
   gaisser_hillas(
     const double x,
@@ -19,7 +18,6 @@ namespace util::math {
     return z <= 0? 0 : ecal * std::pow(z, am1) * std::exp(-z) / (l * std::tgamma(1+am1));
   }
 
-  // gaisser-hillas function: compatible with ROOT's TF1
   double
   gaisser_hillas(
     const double* x,
@@ -27,6 +25,59 @@ namespace util::math {
   )
   {
     return gaisser_hillas(*x, p[0], p[1], p[2], p[3]);
+  }
+
+  double
+  double_gaisser_hillas(
+    const double x,
+    const double ecal,
+    const double w,
+    const double x01,
+    const double xmax1,
+    const double lambda1,
+    const double x02,
+    const double xmax2,
+    const double lambda2
+  )
+  {
+    return w*gaisser_hillas(x, ecal, x01, xmax1, lambda1) +
+      (1-w)*gaisser_hillas(x, ecal, x02, xmax2, lambda2);
+  }
+
+  double
+  double_gaisser_hillas(
+    const double* x,
+    const double* p
+  )
+  {
+    return double_gaisser_hillas(*x, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+  }
+
+  double
+  gaisser_hillas_sixpar(
+    const double x,
+    const double ymax,
+    const double x0,
+    const double xmax,
+    const double p1,
+    const double p2,
+    const double p3
+  )
+  {
+    if (x <= x0) {
+      return 0;
+    }
+    const double l = p1 + x*(p2 + x*p3);
+    return ymax * std::pow((x-x0)/(xmax-x0), (xmax-x0)/l) * std::exp((xmax-x)/l);
+  }
+
+  double
+  gaisser_hillas_sixpar(
+    const double* x,
+    const double* p
+  )
+  {
+    return gaisser_hillas_sixpar(*x, p[0], p[1], p[2], p[3], p[4], p[5]);
   }
 
   // universal shower profile function: explicit parameters
