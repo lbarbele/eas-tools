@@ -171,10 +171,7 @@ struct GHDoubleFcn : public VFitter<8> {
   }
 
   double operator()(const double* x, const double* p) {
-    using util::math::gaisser_hillas;
-    const double& ecal1 = p[0]*p[1];
-    const double& ecal2 = p[0]*(1-p[1]);
-    return gaisser_hillas(*x, ecal1, p[2], p[3], p[4]) + gaisser_hillas(*x, ecal2, p[5], p[6], p[7]);
+    return util::math::double_gaisser_hillas(x, p);
   }
 };
 
@@ -198,15 +195,7 @@ struct GHSixParamFcn : public VFitter<6> {
   }
 
   double operator()(const double* x, const double* p) {
-    const double& depth = *x;
-    const double& max = p[0];
-    const double& x0 = p[1];
-    const double& xmax = p[2];
-    const double lambda = p[3] + depth*(p[4] + depth*p[5]);
-    if (depth <= x0) {
-      return 0;
-    }
-    return max * std::pow((depth-x0)/(xmax-x0), (xmax-x0)/lambda) * std::exp((xmax-depth)/lambda);
+    return util::math::gaisser_hillas_sixpar(x, p);
   }
 };
 
@@ -252,18 +241,13 @@ struct GHDoubleConstrainedFcn : public VFitter<4>, public IMassDep {
   }
 
   double operator()(const double* x, const double* p) {
-    using util::math::gaisser_hillas;
-    const double& ecal = p[0];
-    const double& w = p[1];
-    const double ecal1 = w*ecal;
-    const double ecal2 = (1-w)*ecal;
-    const double lgecal1 = std::log10(ecal1) - 9;
-    const double lgecal2 = std::log10(ecal2) - 9;
-    const double x0_1 = models::dedx_profile::get_gh_x0(lgecal1, fMassId);
-    const double x0_2 = models::dedx_profile::get_gh_x0(lgecal2, fMassId);
-    const double lambda1 = models::dedx_profile::get_gh_lambda(lgecal1, fMassId);
-    const double lambda2 = models::dedx_profile::get_gh_lambda(lgecal2, fMassId);
-    return gaisser_hillas(*x, ecal1, x0_1, p[2], lambda1) + gaisser_hillas(*x, ecal2, x0_2, p[3], lambda2);
+    const double lgecal1 = std::log10(p[1]*p[0]) - 9;
+    const double lgecal2 = std::log10((1-p[1])*p[0]) - 9;
+    const double x01 = models::dedx_profile::get_gh_x0(lgecal1, fMassId);
+    const double x02 = models::dedx_profile::get_gh_x0(lgecal2, fMassId);
+    const double l1 = models::dedx_profile::get_gh_lambda(lgecal1, fMassId);
+    const double l2 = models::dedx_profile::get_gh_lambda(lgecal2, fMassId);
+    return util::math::double_gaisser_hillas(*x, p[0], p[1], x01, p[2], l1, x02, p[3], l2);
   }
 };
 
@@ -313,10 +297,6 @@ main(
 
   // disable printout messages from ROOT
   gErrorIgnoreLevel = kWarning;
-
-  // so we don't have to type the namespaces everytime
-  using models::dedx_profile::get_gh_x0;
-  using models::dedx_profile::get_gh_lambda;
 
   // * define the max number of tries when a fit fails
   const unsigned maxTries = 10;
@@ -464,8 +444,8 @@ main(
       // xmax: read from CONEX's six-parameter fit
       const double xmax = shower.get_xmax();
       // x0 and lambda: use our parametrization in terms of ecal
-      const double x0 = get_gh_x0(lgecal, id);
-      const double lambda = get_gh_lambda(lgecal, id);
+      const double x0 = models::dedx_profile::get_gh_x0(lgecal, id);
+      const double lambda = models::dedx_profile::get_gh_lambda(lgecal, id);
       // parameters for the six-param. fit: read from CONEX
       const double x0six = shower.get_x0();
       const double dedxmx = shower.get_dedx_mx();
