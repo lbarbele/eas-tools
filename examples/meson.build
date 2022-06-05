@@ -1,12 +1,19 @@
+example_dirs = [
+  'double-bump',
+]
+
+foreach dir : example_dirs
+  subdir(dir)
+endforeach
+
 example_progs = [
   'make_stack',
   'check_stack',
   'get_alpha',
   'fit_conex_profiles',
-  'fit_conex_anomalous',
-  'select_anomalous',
   'plot_conex_profiles',
-  'plot_corsika_profiles'
+  'plot_corsika_profiles',
+  'plot_coreas_data'
 ]
 
 foreach name : example_progs
