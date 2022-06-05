@@ -1,3 +1,5 @@
+#ifndef _util_math_h
+#define _util_math_h
 
 namespace util::math {
 
@@ -85,3 +87,5 @@ namespace util::math {
   }
 
 } // namespace util::math
+
+#endif
