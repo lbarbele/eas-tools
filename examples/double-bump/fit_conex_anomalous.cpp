@@ -2,54 +2,50 @@
  ! fit_conex_anomalous.cpp
  ! last update: 03-06-2022
  *
- * This programs takes as input (from stdin) a list of CONEX simulations
- * and will try to fit the dEdX profiles of each shower in these files.
+ * This program takes as input (from stdin) a list of CONEX simulations
+ * and tries to fit the dEdX profiles of each shower in these files.
  * The fits are produced in five different variations of the usual
- * Gaisser-Hillas function. Namely:
- *
+ * Gaisser-Hillas function. The idea is that the comparison of these
+ * different fits allows for the classification of anomalous profiles.
+ * The different fit functions are:
  * 
- ? a) Gaisser-Hillas function
+ * a) Gaisser-Hillas function
  *    Usual Gaisser-Hillas profile, but using the calorimetric energy as
  *    a free parameter, instead of the standard "Nmax". The functional
  *    form is:
  * 
- *      dEdX(X) = Ecal * z^(alpha-1) * exp(-z) / (lambda*Gamma(alpha))
- *            z = (X - X0) / lambda
- *    alpha - 1 = (Xmax - X0) / lambda
+ *      dEdx(x) = ecal * z^(alpha-1) * exp(-z) / (lambda*Gamma(alpha))
+ *            z = (x - x0) / lambda
+ *    alpha - 1 = (xmax - x0) / lambda
  * 
- * 
- ? b) Constrained Gaisser-Hillas function
+ * b) Constrained Gaisser-Hillas function
  *    Same as (a), but constraining X0 and lambda to average values. Those
  *    are parametrized as a function of Ecal (see models/dedx_profile.h)
  *    The parametrizations consider also the mass dependency.
  * 
- * 
- ? c) Six-parameter Gaisser-Hillas function
+ * c) Six-parameter Gaisser-Hillas function
  *    This is the same Gaisser-Hillas function used in CONEX. In this
  *    case, the amplitude parameter is dEdX_mx, not Ecal, because there
  *    is no closed form expression to our function. The functional form
  *    is:
  * 
- *      dEdX(X) = dEdX_mx *
- *                ((X-X0)/(Xmax-X0))^((Xmax-X0)/lambda(X)) *
+ *      dEdx(x) = ymax *
+ *                ((x-x0)/(xmax-x0))^((xmax-x0)/lambda(x)) *
  *                exp((Xmax-X)/lambda(X))
  * 
- *    lambda(X) = p1 + p2 * X + p3 * X * X
+ *    lambda(x) = p1 + x*(p2 + p3*x)
  * 
- * 
- ? d) Double Gaisser-Hillas
+ * d) Double Gaisser-Hillas
  *    This is a weighted sum of two Gaisser-Hillas functions.
  * 
- *    dEdX(X) = w*dEdX_1(X, Ecal) + (1-w)*dEdX_2(X, Ecal)
+ *    dEdx(x) = w*dEdx_1(x, ecal) + (1-w)*dEdx_2(x, ecal)
  * 
- * 
- ? e) Constrained double Gaisser-Hillas
+ * e) Constrained double Gaisser-Hillas
  *    Same as above, but with X0 and lambda constrained to their average
  *    values, just as in case (b).
  *  
- * For details on the fitting functions, see the fitter classes below.
- *
- *
+ * For details on the fitting functions, see the fitter classes in fitters.h
+ !
  ! Syntax, options and input format
  * 
  * The program takes as input a list of CONEX files from stdin
@@ -61,44 +57,80 @@
  * --plot file.pdf : plots fitted profiles into the specified file
  * --out file.root : sets the output file name (default is profileAnalysis.root)
  * --max-showers n : stop processing after n showers have been processed
- * 
- * 
+ ! 
  ! Root output files
  *
  * The main output of this program is a root file containing two trees: one with
  * the names of the files that have been processed and, the main one, with data
  * from the fitted profiles.
- * 
- * 
- ? "inputFiles" tree
+ ?
+ ? - "inputFiles" tree:
  *
- * This tree contains a single branch called "fileName" of type TString. One entry
- * is produced for each file that have been processed, even if it has been skipped
- * due to the max-showers cutoff.
+ *   This tree contains a single branch called "fileName" of type TString. One entry
+ *   is produced for each file that have been processed, even if it has been skipped
+ *   due to the max-showers cutoff.
+ ? 
+ ? - "data" tree:
  * 
+ *   The tree contains one entry for each processed shower and is structured in the
+ *   following branches:
  * 
- ? "data" tree
+ *   . ifile (unsigned int): contains the index to get the corresponding file name
+ *     from the "inputFiles" tree
  * 
- * The contains one entry for each processed shower and is structured in the
- * following branches:
+ *   . ishower (unsigned int): contains the shower number (starting from 0) of the
+ *     shower in the input file
  * 
- * - ifile (unsigned int): contains the index to get the corresponding file name
- *   from the "inputFiles" tree
+ *   . lgE (double): base-10 logarithm of the primary energy in eV
  * 
- * - ishower (unsigned int): contains the shower number (starting from 0) of the
- *   shower in the input file
+ *   . minDepth (double): minimum value of atmospheric depth used in the fit. That
+ *     is, points of the dedx with depth below this value are not considered in
+ *     the fits
  * 
- * - lgE (double): base-10 logarithm of the primary energy in eV
+ *   . maxDepth (double): maximum value of atmospheric depth used in the fit. That
+ *     is, points of the dedx with depth above this value are not considered in
+ *     the fits.
  * 
- * - dedx (TGraph): fitted dEdX profile, a simple copy from the CONEX file
+ *   . ninflec (unsigned int): count of inflection points in the dEdX profile
  * 
- * - ninflec (unsigned int): count of inflection points in the dEdX profile
+ *   . dedx (TGraph): fitted dEdX profile, a simple copy from the CONEX file
  * 
- * - ghSingleFit (struct): corresponds to the function (a) (see above)
- * - ghDoubleFit (struct): corresponds to the function (d) (see above)
- * - ghSingleConstrainedFit (struct): corresponds to the function (b) (see above)
- * - ghDoubleConstrainedFit (struct): corresponds to the function (e) (see above)
- * - ghSixParFit (struct): corresponds to the function (c) (see above)
+ *   . ghSingleFit (struct): status, chi2, and parameters of function (a). contains
+ *     the following leaves (all double precision fp numbers):
+ *     . status         . ecal           . ecalErr
+ *     . chi2           . x0             . x0Err
+ *                      . xmax           . xmaxErr
+ *                      . lambda         . lambdaErr
+ * 
+ *   . ghDoubleFit (struct): status, chi2, and parameters of function (d). contains
+ *     the following leaves (all double precision fp numbers):
+ *     . status         . x0_1           . x0_1Err
+ *     . chi2           . xmax_1         . xmax_1Err
+ *     . ecal           . lambda_1       . lambda_1Err
+ *     . ecalErr        . x0_2           . x0_2Err
+ *     . w              . xmax_2         . xmax_2Err
+ *     . wErr           . lambda_2       . lambda_2Err
+ * 
+ *   . ghSingleConstrainedFit (struct): status, chi2, and parameters of function (b).
+ *     contains the following leaves (all double precision fp numbers):
+ *     . status         . ecal           . ecalErr
+ *     . chi2           . xmax           . xmaxErr
+ * 
+ *   . ghDoubleConstrainedFit (struct): status, chi2, and parameters of function (e).
+ *     contains the following leaves (all double precision fp numbers):
+ *     . status         . xmax_1         . xmax_1Err
+ *     . chi2           . xmax_2         . xmax_2Err
+ *                      . ecal           . ecalErr
+ *                      . w              . wErr
+ * 
+ *   . ghSixParFit (struct): status, chi2, and parameters of function (c). contains
+ *     the following leaves (all double precision fp numbers):
+ *     . status         . ymax           . ecalErr
+ *     . chi2           . x0             . x0Err
+ *                      . xmax           . xmaxErr
+ *                      . p1             . p1Err
+ *                      . p2             . p2Err
+ *                      . p3             . p3Err
  * 
  */
 #include <iostream>
@@ -122,19 +154,13 @@
 #include "fitters.h"
 #include "multipagecanvas.h"
 
-// ! helper functions (see definition below)
+// ! helper function (see definition below)
 TGraphErrors getProfileCut(TGraph& g, bool doFluctuate = false);
 
 // ! main function
 // ? loops over input files, which are given through stdin
 // ? fits every shower in these files
-// ? builts a tree containing an entry for each fitted shower with:
-// ? - the corresponding file name
-// ? - the index of the shower inside the file (starting at 0)
-// ? - the log10(E/eV
-// ? - the dEdX profile (TGraph)
-// ? - the number of inflection points on the dEdX profile
-// ? - fitted data for each function
+// ? fills the output trees
 int
 main(
   int argc,
@@ -206,6 +232,8 @@ main(
   unsigned int ishower = 0;
   unsigned int ninflec = 0;
   double lgE = 0;
+  double minDepth = 0;
+  double maxDepth = 0;
   TGraph dedx;
 
   GHSingleFcn ghSingleFit;
@@ -217,14 +245,16 @@ main(
   dataTree.Branch("ifile", &ifile, "ifile/i");
   dataTree.Branch("ishower", &ishower, "ishower/i");
   dataTree.Branch("lgE", &lgE, "lgE/D");
-  dataTree.Branch("dedx", &dedx);
+  dataTree.Branch("minDepth", &minDepth, "minDepth/D");
+  dataTree.Branch("maxDepth", &maxDepth, "maxDepth/D");
   dataTree.Branch("ninflec", &ninflec, "ninflec/i");
+  dataTree.Branch("dedx", &dedx);
 
-  dataTree.Branch("ghSingleFit", ghSingleFit.Data(), ghSingleFit.GetLeaves().c_str());
-  dataTree.Branch("ghDoubleFit", ghDoubleFit.Data(), ghDoubleFit.GetLeaves().c_str());
-  dataTree.Branch("ghSingleConstrainedFit", ghSingleConstrainedFit.Data(), ghSingleConstrainedFit.GetLeaves().c_str());
-  dataTree.Branch("ghDoubleConstrainedFit", ghDoubleConstrainedFit.Data(), ghDoubleConstrainedFit.GetLeaves().c_str());
-  dataTree.Branch("ghSixParFit", ghSixParFit.Data(), ghSixParFit.GetLeaves().c_str());
+  dataTree.Branch(ghSingleFit.GetName(), ghSingleFit.Data(), ghSingleFit.GetLeaves().c_str());
+  dataTree.Branch(ghDoubleFit.GetName(), ghDoubleFit.Data(), ghDoubleFit.GetLeaves().c_str());
+  dataTree.Branch(ghSingleConstrainedFit.GetName(), ghSingleConstrainedFit.Data(), ghSingleConstrainedFit.GetLeaves().c_str());
+  dataTree.Branch(ghDoubleConstrainedFit.GetName(), ghDoubleConstrainedFit.Data(), ghDoubleConstrainedFit.GetLeaves().c_str());
+  dataTree.Branch(ghSixParFit.GetName(), ghSixParFit.Data(), ghSixParFit.GetLeaves().c_str());
 
   // * write a tree with the names of the input files
   TTree inputFilesTree("inputFiles", "inputFiles");
@@ -281,8 +311,8 @@ main(
       ninflec = util::math::count_inflection_points(profile.GetY(), profile.GetN(), 5);
 
       // * min/max depth values
-      const double min = profile.GetX()[0];
-      const double max = profile.GetX()[profile.GetN()-1];
+      minDepth = profile.GetX()[0];
+      maxDepth = profile.GetX()[profile.GetN()-1];
 
       // * parameter estimates
       // calorimetric energy: use integral of the dEdX profile
@@ -306,11 +336,11 @@ main(
       const double xmax_2 = xmax+200;
 
       // * perform the fits
-      ghSingleFit.Fit(profile, min, max, {ecal, x0, xmax, lambda}, maxTries);
-      ghDoubleFit.Fit(profile, min, max, {ecal, w, x0, xmax_1, lambda, x0, xmax_2, lambda}, maxTries);
-      ghSixParFit.Fit(profile, min, max, {dedxmx, x0six, xmax, p1, p2, p3}, maxTries);
-      ghSingleConstrainedFit.Fit(profile, min, max, {ecal, xmax}, maxTries);
-      ghDoubleConstrainedFit.Fit(profile, min, max, {ecal, w, xmax_1, xmax_2}, maxTries);
+      ghSingleFit.Fit(profile, minDepth, maxDepth, {ecal, x0, xmax, lambda}, maxTries);
+      ghDoubleFit.Fit(profile, minDepth, maxDepth, {ecal, w, x0, xmax_1, lambda, x0, xmax_2, lambda}, maxTries);
+      ghSixParFit.Fit(profile, minDepth, maxDepth, {dedxmx, x0six, xmax, p1, p2, p3}, maxTries);
+      ghSingleConstrainedFit.Fit(profile, minDepth, maxDepth, {ecal, xmax}, maxTries);
+      ghDoubleConstrainedFit.Fit(profile, minDepth, maxDepth, {ecal, w, xmax_1, xmax_2}, maxTries);
 
       // * draw
       if (doPlots) {
