@@ -15,7 +15,7 @@ namespace util::math {
   {
     const double z = (x - x0)/l;
     const double am1 = (xmax - x0)/l;
-    return z <= 0? 0 : ecal * std::pow(z, am1) * std::exp(-z) / (l * std::tgamma(1+am1));
+    return z <= 0? 0 : ecal * std::exp(-z - std::lgamma(1+am1) + am1*std::log(z)) / l;
   }
 
   double
@@ -68,7 +68,7 @@ namespace util::math {
       return 0;
     }
     const double l = p1 + x*(p2 + x*p3);
-    return ymax * std::pow((x-x0)/(xmax-x0), (xmax-x0)/l) * std::exp((xmax-x)/l);
+    return ymax * std::exp(((xmax - x) + (xmax - x0)*std::log((x-x0)/(xmax-x0))) / l);
   }
 
   double
