@@ -21,8 +21,10 @@ public:
     }
   }
 
-  void Print() {
+  void Print(bool isLogx = false, bool isLogy = false) {
     if (!fName.empty()) {
+      TCanvas::SetLogx(isLogx);
+      TCanvas::SetLogy(isLogy);
       TCanvas::Print(fName.c_str());
     }
   }
