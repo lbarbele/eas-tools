@@ -57,11 +57,9 @@ struct FitData {
 // * Defines the virtual operator(), the function used by the TF1 base
 template<unsigned int NPar>
 class VFitter : public TF1 {
-private:
-  FitData<NPar> fFitData;
-
 protected:
   std::string fDrawOpt;
+  FitData<NPar> fFitData;
 
 public:
   VFitter() : TF1("", this, &VFitter::operator(), 0., 2000., NPar) {}
@@ -73,10 +71,10 @@ public:
     TF1::Draw((opt.empty()? fDrawOpt : opt).c_str());
   }
 
-  void*
+  FitData<NPar>*
   Data()
   {
-    return reinterpret_cast<void*>(&fFitData);
+    return &fFitData;
   }
 
   std::vector<std::string>
