@@ -381,7 +381,7 @@ two_parameter_fits(
       const double lgecal = std::log10(p[0]) - 9;
       p[1] = fit_X0->Eval(lgecal);
       p[3] = fit_lambda->Eval(lgecal);
-      return util::math::gaisser_hillas(x, p);
+      return util::math::gaisser_hillas_ecal(*x, p[0], p[1], p[2], p[3]);
     };
     
     TF1 gh("", ghFunction_two, min, max, 4);
@@ -396,7 +396,7 @@ two_parameter_fits(
       const double lgecal = std::log10(p[0]) - 9;
       p[2] = fit_L->Eval(lgecal);
       p[3] = fit_R->Eval(lgecal);
-      return util::math::usp_function(x, p);
+      return util::math::usp_ecal(*x, p[0], p[1], p[2], p[3]);
     };
 
     TF1 usp("", uspFunction_two, min, max, 4);
@@ -462,7 +462,7 @@ three_parameter_fits(
     // make a gaisser-hillas fit, with the calorimetric energy as a free parameter
     auto ghFunction_three = [&](double* x, double* p){
       p[1] = fit_X0->Eval(std::log10(p[0]) - 9);
-      return util::math::gaisser_hillas(x, p);
+      return util::math::gaisser_hillas_ecal(*x, p[0], p[1], p[2], p[3]);
     };
     
     TF1 gh("", ghFunction_three, min, max, 4);
@@ -475,7 +475,7 @@ three_parameter_fits(
     // make a USP fit, with the calorimetric energy as a free parameter
     auto uspFunction_three = [&](double* x, double* p){
       p[2] = fit_L->Eval(std::log10(p[0]) - 9);
-      return util::math::usp_function(x, p);
+      return util::math::usp_ecal(*x, p[0], p[1], p[2], p[3]);
     };
 
     TF1 usp("", uspFunction_three, min, max, 4);
@@ -566,7 +566,7 @@ four_parameter_fits(
       const double max = profile.GetX()[profile.GetN()-1];
 
       // make a gaisser-hillas fit, with the calorimetric energy as a free parameter
-      TF1 gh("", util::math::gaisser_hillas, min, max, 4);
+      TF1 gh("", [](double* x, double* p){return util::math::gaisser_hillas_ecal(*x, p[0], p[1], p[2], p[3]);}, min, max, 4);
       gh.SetParameter(0, ecal);
       gh.SetParameter(1, -130);
       gh.SetParameter(2, xmax);
@@ -574,7 +574,7 @@ four_parameter_fits(
       ghFit = *profile.Fit(&gh, "SQN");
 
       // make a USP fit, with the calorimetric energy as a free parameter
-      TF1 usp("", util::math::usp_function, min, max, 4);
+      TF1 usp("", [](double* x, double* p){return util::math::usp_ecal(*x, p[0], p[1], p[2], p[3]);}, min, max, 4);
       usp.SetParameter(0, ecal);
       usp.SetParameter(1, xmax);
       usp.SetParameter(2, 225);
