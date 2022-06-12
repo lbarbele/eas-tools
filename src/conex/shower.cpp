@@ -1,8 +1,10 @@
+#include <utility>
+
 #include <conex/shower.h>
 
 namespace conex {
 
-  TGraph
+  TGraph&&
   shower::graph_dedx()
   const
   {
@@ -11,7 +13,7 @@ namespace conex {
       const double x = 0.5*(get_depths()[i] + get_depths()[i+1]);
       g.SetPoint(i, x, get_dedx()[i]);
     }
-    return g;
+    return std::move(g);
   }
 
 } // namespace conex
