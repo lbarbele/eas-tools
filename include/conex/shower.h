@@ -54,7 +54,7 @@ namespace conex {
 
   public:
 
-    TGraph&& graph_dedx() const;
+    TGraph graph_dedx() const;
 
     util::gaisser_hillas_fit get_fit() const
     {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}
