@@ -134,28 +134,273 @@
  * 
  */
 #include <iostream>
-#include <algorithm>
+#include <iomanip>
 #include <numeric>
-#include <random>
 #include <cmath>
 #include <string>
+#include <any>
 
 #include <TROOT.h>
 #include <TFile.h>
 #include <TTree.h>
-#include <TGraph.h>
-#include <TGraphErrors.h>
+#include <TError.h>
 #include <TString.h>
+#include <TGraph.h>
+#include <TF1.h>
+#include <TSystem.h>
+#include <TFitResult.h>
+#include <TFitResultPtr.h>
+
+#include <TGraphErrors.h>
+
+#include <Math/SpecFunc.h>
+
+#include <tclap/CmdLine.h>
 
 #include <conex/file.h>
 #include <util/math.h>
-#include <models/dedx_profile.h>
 
-#include "fitters.h"
+// #include "fitters.h"
 #include "multipagecanvas.h"
 
-// ! helper function (see definition below)
-TGraphErrors getProfileCut(TGraph& g, bool doFluctuate = false);
+// ! fitters
+class GHSixParFcn : public TF1 {
+public:
+  GHSixParFcn() : TF1("ghSixParFit", this, 0, 1, 6) {}
+
+  struct {
+    double chi2;
+    double nmax;
+    double x0;
+    double xmax;
+    double p1;
+    double p2;
+    double p3;
+  } params;
+
+  auto MakeBranch(TTree& tree) {
+    return tree.Branch(GetName(), &params, "chi2/D:nmax:x0:xmax:p1:p2:p3");
+  }
+
+  auto Fit(
+    TGraphErrors& profile, 
+    const double min, 
+    const double max,
+    const conex::shower& shower,
+    unsigned int maxTries = 10
+  )
+  {
+    // * adjust the profile range 
+    SetRange(min, max);
+
+    // * set initial parameter values
+    SetParameters(
+      shower.get_dedx_mx(),
+      shower.get_x0(),
+      shower.get_xmax(),
+      shower.get_p1(),
+      shower.get_p2(),
+      shower.get_p3()
+    );
+
+    for (int i = 0; i < GetNpar(); ++i) {
+      SetParError(i, 0.01*GetParameter(i));
+    }
+
+    // * perform the fit
+    TFitResultPtr result;
+    int ntries = maxTries;
+    do {
+      result = profile.Fit(this, "SQN", "", min, max);
+    } while (--ntries > 0 && result->Status() != 0);
+
+    // * copy the parameters
+    params.chi2 = result->MinFcnValue() * (result->Status() == 0? 1 : -1);
+    params.nmax = GetParameter(0);
+    params.x0 = GetParameter(1);
+    params.xmax = GetParameter(2);
+    params.p1 = GetParameter(3);
+    params.p2 = GetParameter(4);
+    params.p3 = GetParameter(5);
+
+    return TFitResultPtr();
+  }
+
+  double operator()(const double* x, const double* p) const {
+    return util::math::gaisser_hillas(x[0], p[0], p[1], p[2], p[3], p[4], p[5]);
+  }
+};
+
+class GHSingleFcn : public TF1 {
+private:
+  double fMinDepth = 0;
+  double fMaxDepth = 1;
+
+  double GetEcal(const double* p) const {
+    const double zm = (p[2] - p[1]) / p[3];
+    const double za = (fMinDepth - p[1]) / p[3];
+    const double zb = (fMaxDepth - p[1]) / p[3];
+    return p[0] / (ROOT::Math::inc_gamma(zm+1, zb) - ROOT::Math::inc_gamma(zm+1, za));
+  }
+
+public:
+  GHSingleFcn() : TF1("ghSingleFit", this, 0, 1, 4) {}
+
+  struct {
+    double chi2;
+    double ecal;
+    double x0;
+    double xmax;
+    double lambda;
+  } params;
+
+  auto MakeBranch(TTree& tree) {
+    return tree.Branch(GetName(), &params, "chi2/D:ecal:x0:xmax:lambda");
+  }
+
+  auto Fit(
+    TGraphErrors& profile, 
+    const double min, 
+    const double max,
+    const double integral,
+    const double xmax,
+    unsigned int maxTries = 10
+  ) {
+    // * adjust the profile range 
+    SetRange(min, max);
+    fMinDepth = min;
+    fMaxDepth = max;
+
+    // * set guesses for x0, xmax, and lambda
+    SetParameter(0, integral);
+    SetParameter(1, -100);
+    SetParameter(2, xmax);
+    SetParameter(3, 60);
+
+    // * perform the fit
+    TFitResultPtr result;
+    int ntries = maxTries;
+    do {
+      result = profile.Fit(this, "SQN", "", min, max);
+    } while (--ntries > 0 && result->Status() != 0);
+
+    // * copy the parameters
+    params.chi2 = result->MinFcnValue() * (result->Status() == 0? 1 : -1);
+    params.ecal = GetEcal(GetParameters());
+    params.x0 = GetParameter(1);
+    params.xmax = GetParameter(2);
+    params.lambda = GetParameter(3);
+
+    return result;
+  }
+
+  double operator()(const double* x, const double* p) const {
+    const double ecal = GetEcal(p);
+    return util::math::gaisser_hillas_ecal(*x, ecal, p[1], p[2], p[3]);
+  }
+};
+
+class GHDoubleFcn : public TF1 {
+private:
+  double fMinDepth = 0;
+  double fMaxDepth = 1;
+
+  double GetEcal(const double *p) const{
+    double ecal = 0;
+
+    const double zm1 = (p[3] - p[2]) / p[4];
+    const double za1 = (fMinDepth - p[2]) / p[4];
+    const double zb1 = (fMaxDepth - p[2]) / p[4];
+    ecal += p[1] * (ROOT::Math::inc_gamma(zm1+1, zb1) - ROOT::Math::inc_gamma(zm1+1, za1));
+
+    const double zm2 = (p[6] - p[5]) / p[7];
+    const double za2 = (p[8] - p[5]) / p[7];
+    const double zb2 = (p[9] - p[5]) / p[7];
+    ecal += (1-p[1]) * (ROOT::Math::inc_gamma(zm2+1, zb2) - ROOT::Math::inc_gamma(zm2+1, za2));
+
+    ecal = p[0] / ecal;
+
+    return ecal;
+  }
+
+public:
+  GHDoubleFcn() : TF1("ghDoubleFit", this, 0, 1, 8) {}
+
+  struct {
+    double chi2;
+    double ecal;
+    double w;
+    double x0_1;
+    double xmax_1;
+    double lambda_1;
+    double x0_2;
+    double xmax_2;
+    double lambda_2;
+  } params;
+
+  auto MakeBranch(TTree& tree) {
+    return tree.Branch(GetName(), &params, "chi2/D:ecal:w:x0_1:xmax_1:lambda_1:x0_2:xmax_2:lambda_2");
+  }
+
+  auto Fit(
+    TGraphErrors& profile, 
+    const double min, 
+    const double max,
+    const double integral,
+    unsigned int maxTries = 10
+  ) {
+    // * adjust the profile range 
+    SetRange(min, max);
+    fMinDepth = min;
+    fMaxDepth = max;
+
+    // * set parameter guesses
+    SetParameter(0, integral);
+    SetParameter(1, 0.5);
+    SetParameter(2, -120);
+    SetParameter(3, 0.4*(max-min));
+    SetParameter(4, 60);
+    SetParameter(5, -120);
+    SetParameter(6, 0.6*(max-min));
+    SetParameter(7, 60);
+
+    // * set parameter ranges
+    SetParLimits(0, 0.5*integral, 1.5*integral);
+    SetParLimits(1, 0, 1);
+    SetParLimits(2, -5000, min);
+    SetParLimits(3, min, max);
+    SetParLimits(4, 1, 500);
+    SetParLimits(5, -5000, min);
+    SetParLimits(6, min, max);
+    SetParLimits(7, 1, 500);
+
+    // * perform the fit
+    TFitResultPtr result;
+    int ntries = maxTries;
+    do {
+      result = profile.Fit(this, "SQN", "", min, max);
+    } while (--ntries > 0 && result->Status() != 0);
+
+    // * copy the parameters
+    params.chi2 = result->MinFcnValue() * (result->Status() == 0? 1 : -1);
+    params.ecal = GetEcal(GetParameters());
+    params.w = GetParameter(1);
+    params.x0_1 = GetParameter(2);
+    params.xmax_1 = GetParameter(3);
+    params.lambda_1 = GetParameter(4);
+    params.x0_2 = GetParameter(5);
+    params.xmax_2 = GetParameter(6);
+    params.lambda_2 = GetParameter(7);
+
+    return result;
+  }
+
+  double operator()(const double* x, const double* p) const {
+    const double ecal = GetEcal(p);
+    return p[1] * util::math::gaisser_hillas_ecal(*x, ecal, p[2], p[3], p[4])
+      + (1 - p[1]) * util::math::gaisser_hillas_ecal(*x, ecal, p[5], p[6], p[7]);
+  }
+};
 
 // ! main function
 // ? loops over input files, which are given through stdin
@@ -167,259 +412,176 @@ main(
   char** argv
 )
 {
-  // let ROOT compute the chi2 in parallel
-  ROOT::EnableThreadSafety();
-  ROOT::EnableImplicitMT();
+  // * open the CONEX files piped to stdin and check
+  conex::file cxFiles(std::cin);
+  if (!cxFiles.is_open() || cxFiles.get_n_files() == 0) {
+    std::cerr << "unable to open conex files" << std::endl;
+    return 1;
+  }
 
-  // disable printout messages from ROOT
+  // * define parameters and parse the command line
+  TCLAP::CmdLine cmdLine("fit_conex_anomalous");
+
+  TCLAP::ValueArg<unsigned int> maxShowers("m", "max-showers",
+    "Maximum number of showers to be analyzed",
+    false, -1, "nshowers", cmdLine);
+  TCLAP::ValueArg<std::string> plotFile("p", "plot",
+    "Create a pdf file at the given path with plots of the fitted profiles",
+    false, "", "path", cmdLine);
+  TCLAP::ValueArg<std::string> outFileName("o", "out",
+    "Path to the output .root file (may be overwritten)",
+    false, "profileAnalysis.root", "path", cmdLine);
+  TCLAP::SwitchArg disableMT("s", "single-thread",
+    "Disable ROOT's multithreading capabilities",
+    cmdLine, false);
+
+  cmdLine.parse(argc, argv);
+
+  // * configure ROOT
+  if (!disableMT) {
+    ROOT::EnableThreadSafety();
+    ROOT::EnableImplicitMT();
+  }
+
+  // * open the output file and check
+  TFile file(outFileName.getValue().c_str(), "recreate");
+  if (!file.IsOpen()) {
+    std::cerr << "Failed to open the output file" << std::endl;
+    return 1;
+  }
+
   gErrorIgnoreLevel = kWarning;
 
-  // * define the max number of tries when a fit fails
-  const unsigned maxTries = 10;
-
-  // * parse the command line
-  std::string plotFileName = "";
-  std::string outFileName = "profileAnalysis.root";
-  unsigned int maxShowers = 0;
-  int iarg = 1;
-
-  while (iarg < argc) {
-    std::string opt = argv[iarg++];
-
-    if (iarg == argc) {
-      std::cerr << "missing parameter for option " << opt << std::endl;
-      return 1;
-    }
-
-    std::string arg = argv[iarg++];
-
-    if (opt == "--plot") {
-      plotFileName = arg;
-    } else if (opt == "--out") {
-      outFileName = arg;
-    } else if (opt == "--max-showers") {
-      try {
-        maxShowers = std::stoul(arg);
-      } catch (...) {
-        std::cerr << "bad argument for --max-showers" << std::endl;
-        return 1;
-      }
-    } else {
-      std::cerr << "invalid option " << opt << std::endl;
-      return 1;
-    }
-  }
-
-  // * check the command line
-  const bool doPlots = !plotFileName.empty();
-  if (doPlots && plotFileName.substr(plotFileName.size()-4) != ".pdf") {
-    std::cerr << "bad plot file name " << plotFileName << std::endl;
-    return 1;
-  }
-
-  if (outFileName.substr(outFileName.size()-5) != ".root") {
-    std::cerr << "bad output file name " << outFileName << std::endl;
-    return 1;
-  }
-
-  // * open the output file
-  TFile file(outFileName.c_str(), "recreate");
-
-  // * create the output tree and set its branches
+  // * create the output tree and define its basic branches
   TTree dataTree("data", "data");
 
-  unsigned int ifile = 0;
+  TString fileName;
+  dataTree.Branch("fileName", &fileName);
+
   unsigned int ishower = 0;
-  unsigned int ninflec = 0;
-  double lgE = 0;
-  double minDepth = 0;
-  double maxDepth = 0;
-  TGraph dedx;
-
-  GHSingleFcn ghSingleFit;
-  GHDoubleFcn ghDoubleFit;
-  GHSingleConstrainedFcn ghSingleConstrainedFit;
-  GHDoubleConstrainedFcn ghDoubleConstrainedFit;
-  GHSixParamFcn ghSixParFit;
-
-  dataTree.Branch("ifile", &ifile, "ifile/i");
   dataTree.Branch("ishower", &ishower, "ishower/i");
-  dataTree.Branch("lgE", &lgE, "lgE/D");
-  dataTree.Branch("minDepth", &minDepth, "minDepth/D");
-  dataTree.Branch("maxDepth", &maxDepth, "maxDepth/D");
+
+  unsigned int ninflec = 0;
   dataTree.Branch("ninflec", &ninflec, "ninflec/i");
+  
+  double lgE = 0;
+  dataTree.Branch("lgE", &lgE, "lgE/D");
+
+  double minDepth = 0;
+  dataTree.Branch("minDepth", &minDepth, "minDepth/D");
+
+  double maxDepth = 0;
+  dataTree.Branch("maxDepth", &maxDepth, "maxDepth/D");
+
+  TGraph dedx;
   dataTree.Branch("dedx", &dedx);
 
-  dataTree.Branch(ghSingleFit.GetName(), ghSingleFit.Data(), ghSingleFit.GetLeaves().c_str());
-  dataTree.Branch(ghDoubleFit.GetName(), ghDoubleFit.Data(), ghDoubleFit.GetLeaves().c_str());
-  dataTree.Branch(ghSingleConstrainedFit.GetName(), ghSingleConstrainedFit.Data(), ghSingleConstrainedFit.GetLeaves().c_str());
-  dataTree.Branch(ghDoubleConstrainedFit.GetName(), ghDoubleConstrainedFit.Data(), ghDoubleConstrainedFit.GetLeaves().c_str());
-  dataTree.Branch(ghSixParFit.GetName(), ghSixParFit.Data(), ghSixParFit.GetLeaves().c_str());
+  // * create the fit functions and connect them to the tree
+  GHSingleFcn ghSingleFcn;
+  ghSingleFcn.MakeBranch(dataTree);
 
-  // * write a tree with the names of the input files
-  TTree inputFilesTree("inputFiles", "inputFiles");
-  TString fileName;
-  inputFilesTree.Branch("fileName", &fileName);
-  while (std::cin >> fileName) {
-    inputFilesTree.Fill();
-  }
+  GHDoubleFcn ghDoubleFcn;
+  ghDoubleFcn.MakeBranch(dataTree);
 
-  // * create the output canvas (only if plotFileName is not empty)
-  MultiPageCanvas canvas(plotFileName);
+  GHSixParFcn ghSixParFcn;
+  ghSixParFcn.MakeBranch(dataTree);
 
-  // * loop over input files
+  // * the multiple-page canvas that will be used for plots
+  MultiPageCanvas canvas(plotFile);
+
+  // * loop over showers in the conex files
   unsigned int totalShowers = 0;
-  for (ifile = 0; ifile < inputFilesTree.GetEntries(); ++ifile) {
-    inputFilesTree.GetEntry(ifile);
+  for (const auto& shower : cxFiles) {
 
-    // try to open the conex file (check below)
-    conex::file cxFile(fileName.Data());
-
-    // print progress / check if file is open (skip if file is bad)
-    std::cout << "\r" << ifile+1 << "/" << inputFilesTree.GetEntries() << " " << fileName;
-    if (maxShowers != 0 && totalShowers >= maxShowers) {
-      std::cout << " (skipped)" << std::endl;
-      continue;
-    } else if (!cxFile.is_open()) {
-      std::cout << " (bad)" << std::endl;
-      continue;
-    } else {
-      std::cout << std::endl;
+    // * check if file name has changed and print, if so
+    auto currentFileName = gSystem->BaseName(cxFiles.get_current_file_name().c_str());
+    if (fileName != currentFileName) {
+      fileName = currentFileName;
+      ishower = 0;
+      std::cout
+        << std::setw(5) << cxFiles.get_current_file_number()+1
+        << "/" << cxFiles.get_n_files() << " "
+        << fileName
+        << std::endl;
     }
 
-    // get id of the primary particle (used to get the parameters)
-    const auto id = cxFile.get_header().get_particle();
+    // * increment the counters and check for maxShowers
+    ++ishower;
+    
+    if (++totalShowers > maxShowers) {
+      break;
+    }
 
-    // set mass ID for the constrained fits
-    ghSingleConstrainedFit.SetMass(id);
-    ghDoubleConstrainedFit.SetMass(id);
+    // * the dEdX profile that will be fitted
+    dedx = shower.graph_dedx();
 
-    // loop over showers in the current file
-    for (ishower = 0; ishower < cxFile.get_n_showers() && (maxShowers == 0 || totalShowers < maxShowers); ++ishower, ++totalShowers) {
-      auto shower = cxFile.get_shower(ishower);
+    // * log of the primary energy in eV
+    lgE = shower.get_lge();
 
-      // * data that will be forwarded to the output tree
-      // the dEdX profile from CONEX
-      dedx = shower.graph_dedx();
-      // log10 of the primary energy in eV
-      lgE = shower.get_lge();
+    // * closed interval of the dEdX profile that will be fitted
+    const double accum = std::accumulate(dedx.GetY(), dedx.GetY()+dedx.GetN(), 0.0);
 
-      // * get a cut of the dEdX profile and the associated "errors"
-      auto profile = getProfileCut(dedx);
+    auto itFirst = dedx.GetY();
+    while (*itFirst < 0.001*accum) {
+      ++itFirst;
+    }
 
-      // * count the number of inflection points on the profile
-      ninflec = util::math::count_inflection_points(profile.GetY(), profile.GetN(), 5);
+    auto itLast = dedx.GetY() + dedx.GetN() - 1;
+    while (*itLast < 0.001*accum) {
+      --itLast;
+    }
 
-      // * min/max depth values
-      minDepth = profile.GetX()[0];
-      maxDepth = profile.GetX()[profile.GetN()-1];
+    unsigned iFirst = itFirst - dedx.GetY();
+    unsigned iLast = itLast - dedx.GetY();
 
-      // * parameter estimates
-      // calorimetric energy: use integral of the dEdX profile
-      const double ecal = dedx.Integral();
-      const double lgecal = std::log10(ecal) - 9;
-      // xmax: read from CONEX's six-parameter fit
-      const double xmax = shower.get_xmax();
-      // x0 and lambda: use our parametrization in terms of ecal
-      const double x0 = models::dedx_profile::get_gh_x0(lgecal, id);
-      const double lambda = models::dedx_profile::get_gh_lambda(lgecal, id);
-      // parameters for the six-param. fit: read from CONEX
-      const double x0six = shower.get_x0();
-      const double dedxmx = shower.get_dedx_mx();
-      const double p1 = shower.get_p1();
-      const double p2 = shower.get_p2();
-      const double p3 = shower.get_p3();
-      // weight of the double Gaisser-Hillas: use 1/2
-      const double w = 0.5;
-      // xmax of the double Gaisser-Hillas: use +- 200 g/cm^2 around xmax
-      const double xmax_1 = xmax-200;
-      const double xmax_2 = xmax+200;
+    minDepth = dedx.GetX()[iFirst];
+    maxDepth = dedx.GetX()[iLast];
 
-      // * perform the fits
-      ghSingleFit.Fit(profile, minDepth, maxDepth, {ecal, x0, xmax, lambda}, maxTries);
-      ghDoubleFit.Fit(profile, minDepth, maxDepth, {ecal, w, x0, xmax_1, lambda, x0, xmax_2, lambda}, maxTries);
-      ghSixParFit.Fit(profile, minDepth, maxDepth, {dedxmx, x0six, xmax, p1, p2, p3}, maxTries);
-      ghSingleConstrainedFit.Fit(profile, minDepth, maxDepth, {ecal, xmax}, maxTries);
-      ghDoubleConstrainedFit.Fit(profile, minDepth, maxDepth, {ecal, w, xmax_1, xmax_2}, maxTries);
+    // * number of inflection points in the dEdX profile
+    ninflec = util::math::count_inflection_points(itFirst, 1+itLast-itFirst, 5);
 
-      // * draw
-      if (doPlots) {
-        TGraph graph = dedx;
-        graph.SetPoint(graph.GetN(), dedx.GetX()[dedx.GetN()-1], 0);
-        graph.SetPoint(graph.GetN(), 0, 0);
-        graph.SetFillColorAlpha(kBlack, 0.2);
-        graph.Draw("af");
+    // * energy deposited in the fitted range
+    double edep = 0;
+    for (unsigned int i = iFirst; i < iLast; ++i) {
+      edep += 0.5 * (dedx.GetX()[i+1] - dedx.GetX()[i]) * (dedx.GetY()[i+1] + dedx.GetY()[i]);
+    }
 
-        ghSingleConstrainedFit.Draw();
-        ghDoubleConstrainedFit.Draw();
-        ghSingleFit.Draw();
-        ghDoubleFit.Draw();
-        ghSixParFit.Draw();
+    // * define weights for the chi2 fit
+    TGraphErrors prof(dedx.GetN(), dedx.GetX(), dedx.GetY(), nullptr, nullptr);
+    for (int i = 0; i < dedx.GetN(); ++i) {
+      prof.SetPointError(i, 0, std::sqrt(1e-2 * dedx.GetY()[i] * accum));
+    }
 
-        canvas.Print();
-      }
+    // * perform the fits
+    ghSingleFcn.Fit(prof, minDepth, maxDepth, edep, shower.get_xmx());
+    ghDoubleFcn.Fit(prof, minDepth, maxDepth, edep);
+    ghSixParFcn.Fit(prof, minDepth, maxDepth, shower);
 
-      // * fill the output tree
-      dataTree.Fill();
+    // * fill the data tree
+    dataTree.Fill();
+
+    // * draw
+    if (plotFile.getValue().size() > 0) {
+
+      dedx.SetPoint(dedx.GetN(), dedx.GetX()[dedx.GetN()-1], 0);
+      dedx.SetPoint(dedx.GetN(), 0, 0);
+      dedx.SetFillColorAlpha(kBlue, 0.6);
+      dedx.Draw("af");
+
+      ghDoubleFcn.SetLineColorAlpha(kRed, 0.8);
+      ghDoubleFcn.SetLineWidth(3);
+      ghDoubleFcn.Draw("same l");
+
+      ghSixParFcn.SetLineColorAlpha(kGreen, 0.9);
+      ghSixParFcn.SetLineStyle(kDashed);
+      ghSixParFcn.Draw("same l");
+
+      canvas.Print();
     }
   }
 
-  // * write tree buffer to the output file
+  // * write the tree's buffer to the output file
   file.Write();
 
   return 0;
-}
-
-// ? getProfileCut: create a TGraphErrors with the errors on the
-// ? y coordinates following the procedure of arXiv:1111.0504.
-// ? Optionally, each point can be fluctuated in the same manner
-// ? as in this reference (set doFluctuate to true)
-TGraphErrors
-getProfileCut(
-  TGraph& g,
-  bool doFluctuate
-)
-{
-  const double* x = g.GetX();
-  const double* y = g.GetY();
-  const int nx = g.GetN();
-
-  const double sum = std::accumulate(y, y+nx, 0.0);
-  const double bound = 1e-3*sum;
-
-  const double* first = y;
-  const double* last  = y+nx-1;
-
-  // first element larger than bound
-  while (*first < bound && first <= last) {
-    ++first;
-  }
-
-  // last element larger than bound
-  while (*last < bound && last >= first) {
-    --last;
-  }
-
-  // index of the first element larger than bound and size of the new array
-  const int ifirst = first - y;
-  const int npt = last + 1 - first;
-
-  // array of "fluctuations"
-  double v[npt];
-  std::transform(first, first+npt, v, [=](const double& n){return 1e-2*std::sqrt(sum*n);});
-
-  // add fluctuations to the profile
-  static std::random_device rd;
-  static std::mt19937 gen(rd());
-  static std::normal_distribution<> rand(0, 1);
-  
-  if (doFluctuate) {
-    double yrandom[npt];
-    for (int i = 0; i < npt; ++i) {
-      yrandom[i] = *(first+i) + v[i]*rand(gen);
-    }
-    return TGraphErrors(npt, x+ifirst, yrandom, nullptr, v);
-  } else {
-    return TGraphErrors(npt, x+ifirst, first, nullptr, v);
-  }
 }
