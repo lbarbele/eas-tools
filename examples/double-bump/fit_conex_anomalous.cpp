@@ -424,7 +424,7 @@ main(
 
   TCLAP::ValueArg<unsigned int> maxShowers("m", "max-showers",
     "Maximum number of showers to be analyzed",
-    false, -1, "nshowers", cmdLine);
+    false, 0, "nshowers", cmdLine);
   TCLAP::ValueArg<std::string> plotFile("p", "plot",
     "Create a pdf file at the given path with plots of the fitted profiles",
     false, "", "path", cmdLine);
@@ -507,8 +507,9 @@ main(
 
     // * increment the counters and check for maxShowers
     ++ishower;
+    ++totalShowers;
     
-    if (++totalShowers > maxShowers) {
+    if (maxShowers > 0 && totalShowers > maxShowers) {
       break;
     }
 
