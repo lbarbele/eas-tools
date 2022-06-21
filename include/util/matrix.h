@@ -73,7 +73,12 @@ namespace util {
     template <class UnaryOp>
     constexpr matrix<T, M, N>& transform(UnaryOp op);
 
-    // - Operators
+    // - Matrix transformations
+
+    // * create a transpose matrix
+    constexpr matrix<T, N, M> transpose() const;
+
+    // - Operator overloads
 
     // * (assignemnt) multiplication/division by scalar
     template <class U>
@@ -254,6 +259,24 @@ namespace util {
   {
     std::transform(begin(), end(), begin(), op);
     return *this;
+  }
+
+  // - Matrix transformations
+
+  // * create a transpose matrix
+  template <class T, size_t M, size_t N>
+  constexpr
+  matrix<T, N, M>
+  matrix<T, M, N>::transpose()
+  const
+  {
+    matrix<T, N, M> tranpose;
+    for (size_t i = 0; i < M; ++i) {
+      for (size_t j = 0; j < N; ++j) {
+        transpose(j, i) = (*this)(i, j);
+      }
+    }
+    return transpose;
   }
 
   // - Operations
