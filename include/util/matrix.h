@@ -116,6 +116,17 @@ namespace util {
     constexpr matrix<R, M, N> operator/(const U& scalar) const;
   };
 
+  // - Aliases
+  
+  template <class T, size_t M>
+  using square_matrix = matrix<T, M, M>;
+
+  template <size_t M, size_t N>
+  using matrix_d = matrix<double, M, N>;
+
+  template <size_t M>
+  using square_matrix_d = square_matrix<double, M>;
+
   // - Constructors
 
   // * default constructor
