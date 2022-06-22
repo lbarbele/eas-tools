@@ -12,8 +12,16 @@
 
 namespace util {
 
+  class matrix_base {};
+
+  template <class T, class U = void>
+  using enable_if_matrix_t = std::enable_if_t<std::is_base_of_v<matrix_base, T>, U>;
+
+  template <class T, class U = void>
+  using enable_if_scalar_t = std::enable_if_t<!std::is_base_of_v<matrix_base, T>, U>;
+
   template <class T, size_t M, size_t N>
-  class matrix {
+  class matrix : public matrix_base {
   protected:
     std::array<T, M*N> m_data;
 
@@ -82,10 +90,10 @@ namespace util {
     // - Operator overloads
 
     // * (assignemnt) multiplication/division by scalar
-    template <class U>
+    template <class U, typename = enable_if_scalar_t<U> >
     constexpr matrix<T, M, N>& operator*=(const U& scalar);
 
-    template <class U>
+    template <class U, typename = enable_if_scalar_t<U> >
     constexpr matrix<T, M, N>& operator/=(const U& scalar);
 
     // * (assignment) sum/subtraction by matrix
@@ -112,13 +120,13 @@ namespace util {
 
     // * matrix-matrix product
     template <class U, size_t O, class R = decltype(T{} * U{})>
-    constexpr matrix<R, M, O> operator-(const matrix<U, N, O>& rhs) const;
+    constexpr matrix<R, M, O> operator*(const matrix<U, N, O>& rhs) const;
 
     // * matrix-scalar product/division
-    template <class U, class R = decltype(T{} * U{})>
+    template <class U, class R = decltype(T{} * U{}), typename = enable_if_scalar_t<U> >
     constexpr matrix<R, M, N> operator*(const U& scalar) const;
 
-    template <class U, class R = decltype(T{} / U{})>
+    template <class U, class R = decltype(T{} / U{}), typename = enable_if_scalar_t<U> >
     constexpr matrix<R, M, N> operator/(const U& scalar) const;
   };
 
@@ -284,7 +292,7 @@ namespace util {
 
   // * (assigment) multiplication by scalar
   template <class T, size_t M, size_t N>
-  template <class U>
+  template <class U, typename>
   constexpr
   matrix<T, M, N>&
   matrix<T, M, N>::operator*=(
@@ -296,7 +304,7 @@ namespace util {
 
   // * (assignment) division by scalar
   template <class T, size_t M, size_t N>
-  template <class U>
+  template <class U, typename>
   constexpr
   matrix<T, M, N>&
   matrix<T, M, N>::operator/=(
@@ -403,7 +411,7 @@ namespace util {
   template <class U, size_t O, class R>
   constexpr
   matrix<R, M, O>
-  matrix<T, M, N>::operator-(
+  matrix<T, M, N>::operator*(
     const matrix<U, N, O>& rhs
   ) const
   {
@@ -421,7 +429,7 @@ namespace util {
 
   // * matrix-scalar product (from rhs)
   template <class T, size_t M, size_t N>
-  template <class U, class R>
+  template <class U, class R, typename>
   constexpr
   matrix<R, M, N>
   matrix<T, M, N>::operator*(
@@ -435,7 +443,7 @@ namespace util {
 
   // * matrix-scalar division (from rhs)
   template <class T, size_t M, size_t N>
-  template <class U, class R>
+  template <class U, class R, typename>
   constexpr
   matrix<R, M, N>
   matrix<T, M, N>::operator/(
@@ -450,7 +458,7 @@ namespace util {
   // - Outside class definitions
 
   // * scalar-matrix product (from lhs)
-  template <class T, size_t M, size_t N, class U, class R = decltype(T{} * U{})>
+  template <class T, size_t M, size_t N, class U, class R = decltype(T{} * U{}), typename = enable_if_scalar_t<U> >
   constexpr
   matrix<R, M, N>
   operator*(
