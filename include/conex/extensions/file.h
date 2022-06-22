@@ -1,5 +1,5 @@
-#ifndef _conex_extensions_particlefile_h
-#define _conex_extensions_particlefile_h
+#ifndef _conex_extensions_file_h
+#define _conex_extensions_file_h
 
 #include <string>
 #include <cstddef>
@@ -8,8 +8,6 @@
 #include <TTree.h>
 
 #include <conex/extensions/event.h>
-#include <conex/extensions/particle.h>
-#include <conex/extensions/projectile.h>
 
 namespace conex::extensions {
 
@@ -27,4 +25,4 @@ namespace conex::extensions {
 
 } // namespace conex::extensions
 
-#endif // _conex_particle_file_h
+#endif // _conex_extensions_file_h

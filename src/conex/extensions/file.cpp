@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <conex/extensions/file.h>
+#include <conex/extensions/event.h>
 
 namespace conex::extensions {
 
