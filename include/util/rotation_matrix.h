@@ -17,6 +17,8 @@ namespace util {
   // * rotation matrix class
   class rotation_matrix : public square_matrix_d<3> {
   public:
+    // * build rotation matrix from single rotation around specified axis
+    constexpr
     rotation_matrix(
       const axis ax,
       const double angle
