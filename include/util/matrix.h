@@ -279,13 +279,13 @@ namespace util {
   matrix<T, M, N>::transpose()
   const
   {
-    matrix<T, N, M> tranpose;
+    matrix<T, N, M> other;
     for (size_t i = 0; i < M; ++i) {
       for (size_t j = 0; j < N; ++j) {
-        transpose(j, i) = (*this)(i, j);
+        other(j, i) = (*this)(i, j);
       }
     }
-    return transpose;
+    return other;
   }
 
   // - Operations
