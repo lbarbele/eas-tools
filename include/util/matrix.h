@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <iomanip>
 
 namespace util {
 
@@ -468,11 +469,12 @@ namespace util {
     const matrix<T, M, N>& mtx
   )
   {
+    auto w = stream.width() > 0? stream.width() : 15;
     for (std::size_t i = 0; i < M; ++i) {
       for (std::size_t j = 0; j < N; ++j) {
-        std::cout << std::setw(15) << mtx(i, j);
+        stream << std::setw(w) << mtx(i, j);
       }
-      std::cout << std::endl;
+      stream << std::endl;
     }
     return stream;
   }
