@@ -24,14 +24,6 @@ namespace util {
     vector& operator/=(const double s);
     vector& operator+=(const vector& v);
     vector& operator-=(const vector& v);
-
-    // todo: get this out of here
-    vector& to_obs(const double phi, const double theta);
-    vector& from_obs(const double phi, const double theta);
-    static vector to_obs(const vector& v, const double phi, const double theta);
-    static vector to_obs(const vector& v, const double sinp, const double cosp, const double sint, const double cost);
-    static vector from_obs(const vector& v, const double phi, const double theta);
-    static vector from_obs(const vector& v, const double sinp, const double cosp, const double sint, const double cost);
   };
 
   vector operator*(const double s, const vector& v);
