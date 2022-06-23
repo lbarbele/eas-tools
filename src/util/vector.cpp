@@ -4,6 +4,10 @@
 
 namespace util {
 
+  // - Vector normalization
+
+  // * compute vector norm
+  constexpr
   double
   vector::norm()
   const
@@ -11,6 +15,8 @@ namespace util {
     return std::sqrt((*this)*(*this));
   }
 
+  // * normalize vector to given value
+  constexpr 
   vector&
   vector::normalize(
     double w
@@ -20,6 +26,10 @@ namespace util {
     return *this;
   }
 
+  // - Static methods
+
+  // * compute the cross product between two vectors
+  constexpr
   vector
   vector::cross_product(
   const vector& u,
@@ -33,91 +43,56 @@ namespace util {
     };
   }
 
-  vector
-  vector::operator*(
-    const double s
-  ) const
-  {
-    return {s*this->at(0), s*this->at(1), s*this->at(2)};
-  }
+  // - Vector-scalar operations
 
-  vector
-  vector::operator/(
-    const double s
-  ) const
-  {
-    return {this->at(0)/s, this->at(1)/s, this->at(2)/s};
-  }
-
-  vector
-  vector::operator+(
-    const vector& v
-  ) const
-  {
-    return {this->at(0)+v[0], this->at(1)+v[1], this->at(2)+v[2]};
-  }
-
-  vector
-  vector::operator-(
-    const vector& v
-  ) const
-  {
-    return {this->at(0)-v[0], this->at(1)-v[1], this->at(2)-v[2]};
-  }
-
-  double
-  vector::operator*(
-    const vector&v
-  ) const
-  {
-    return v[0]*this->at(0) + v[1]*this->at(1) + v[2]*this->at(2);
-  }
-
+  constexpr
   vector&
   vector::operator*=(
     const double s
   )
   {
-    this->at(0) *= s;
-    this->at(1) *= s;
-    this->at(2) *= s;
+    at(0) *= s;
+    at(1) *= s;
+    at(2) *= s;
     return *this;
   }
 
+  constexpr
   vector&
   vector::operator/=(
     const double s
   )
   {
-    this->at(0) /= s;
-    this->at(1) /= s;
-    this->at(2) /= s;
+    at(0) /= s;
+    at(1) /= s;
+    at(2) /= s;
     return *this;
   }
 
-  vector&
-  vector::operator+=(
-    const vector& v
-  )
+  constexpr
+  vector
+  vector::operator*(
+    const double s
+  ) const
   {
-    this->at(0) += v[0];
-    this->at(1) += v[1];
-    this->at(2) += v[2];
-    return *this;
+    vector other = *this;
+    other *= s;
+    return other;
   }
 
-  vector&
-  vector::operator-=(
-    const vector& v
-  )
+  constexpr
+  vector
+  vector::operator/(
+    const double s
+  ) const
   {
-    this->at(0) -= v[0];
-    this->at(1) -= v[1];
-    this->at(2) -= v[2];
-    return *this;
+    vector other = *this;
+    other /= s;
+    return other;
   }
 
-  // not a class member:
+  // * not a class member
+  constexpr
   vector
   operator*(
     const double s,
@@ -126,6 +101,63 @@ namespace util {
   {
     return v*s;
   }
-  
 
-} // namespace util
+
+  // - Vector-vector operations
+
+  constexpr
+  vector&
+  vector::operator+=(
+    const vector& v
+  )
+  {
+    at(0) += v[0];
+    at(1) += v[1];
+    at(2) += v[2];
+    return *this;
+  }
+
+  constexpr
+  vector&
+  vector::operator-=(
+    const vector& v
+  )
+  {
+    at(0) -= v[0];
+    at(1) -= v[1];
+    at(2) -= v[2];
+    return *this;
+  }
+
+  constexpr
+  vector
+  vector::operator+(
+    const vector& v
+  ) const
+  {
+    vector other = *this;
+    other += v;
+    return other;
+  }
+
+  constexpr
+  vector
+  vector::operator-(
+    const vector& v
+  ) const
+  {
+    vector other = *this;
+    other -= v;
+    return other;
+  }
+
+  constexpr
+  double
+  vector::operator*(
+    const vector&v
+  ) const
+  {
+    return v[0]*at(0) + v[1]*at(1) + v[2]*at(2);
+  }
+
+} 
