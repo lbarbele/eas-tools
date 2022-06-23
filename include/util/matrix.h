@@ -7,25 +7,26 @@
 #include <stdexcept>
 #include <algorithm>
 #include <functional>
-#include <type_traits>
 #include <iomanip>
+
+#include <util/type_traits.h>
 
 namespace util {
 
   class matrix_base {};
 
-  template <class T, class U = void>
-  using enable_if_matrix_t = std::enable_if_t<std::is_base_of_v<matrix_base, T>, U>;
-
-  template <class T, class U = void>
-  using enable_if_scalar_t = std::enable_if_t<!std::is_base_of_v<matrix_base, T>, U>;
-
   template <class T, size_t M, size_t N>
   class matrix : public matrix_base {
+
   protected:
     std::array<T, M*N> m_data;
 
   public:
+    // - Types
+    using elem_t = T;
+    using matrix_t = matrix<T, M, N>;
+    using transpose_t = matrix<T, N, M>;
+
     // - Constructors
 
     // * default constructor
@@ -72,44 +73,44 @@ namespace util {
 
     // * perform unary operation on every element
     template <class UnaryOp>
-    constexpr matrix<T, M, N>& apply(UnaryOp op);
+    constexpr matrix_t& apply(UnaryOp op);
 
     // * perform binary operation on every element, using the elements of another matrix
     template <class BinaryOp, class U>
-    constexpr matrix<T, M, N>& apply(const matrix<U, M, N>& other, BinaryOp op);
+    constexpr matrix_t& apply(const matrix<U, M, N>& other, BinaryOp op);
 
     // * transform using unary operator
     template <class UnaryOp>
-    constexpr matrix<T, M, N>& transform(UnaryOp op);
+    constexpr matrix_t& transform(UnaryOp op);
 
     // - Matrix transformations
 
     // * create a transpose matrix
-    constexpr matrix<T, N, M> transpose() const;
+    constexpr transpose_t transpose() const;
 
     // - Operator overloads
 
     // * (assignemnt) multiplication/division by scalar
     template <class U, typename = enable_if_scalar_t<U> >
-    constexpr matrix<T, M, N>& operator*=(const U& scalar);
+    constexpr matrix_t& operator*=(const U& scalar);
 
     template <class U, typename = enable_if_scalar_t<U> >
-    constexpr matrix<T, M, N>& operator/=(const U& scalar);
+    constexpr matrix_t& operator/=(const U& scalar);
 
     // * (assignment) sum/subtraction by matrix
     template <class U>
-    constexpr matrix<T, M, N>& operator+=(const matrix<U, M, N>& rhs);
+    constexpr matrix_t& operator+=(const matrix<U, M, N>& rhs);
 
     template <class U>
-    constexpr matrix<T, M, N>& operator-=(const matrix<U, M, N>& rhs);
+    constexpr matrix_t& operator-=(const matrix<U, M, N>& rhs);
 
     // * assignment matrix product (only if rhs is square N x N)
     template <class U>
-    constexpr matrix<T, M, N>& operator*=(const matrix<U, N, N>& rhs);
+    constexpr matrix_t& operator*=(const matrix<U, N, N>& rhs);
 
     // * unary plus/minus operators
-    constexpr matrix<T, M, N> operator+() const;
-    constexpr matrix<T, M, N> operator-() const;
+    constexpr matrix_t operator+() const;
+    constexpr matrix_t operator-() const;
 
     // * matrix sum/subtraction
     template <class U, class R = decltype(T{} + U{})>
