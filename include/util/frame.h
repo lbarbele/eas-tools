@@ -50,6 +50,13 @@ namespace util {
       return f;
     }
 
+    // * access rotation matrices
+    constexpr const square_matrix_d<3>& to() const
+    {return m_to;}
+
+    constexpr const square_matrix_d<3>& from() const
+    {return m_from;}
+
   };
 
 }
