@@ -45,6 +45,17 @@ namespace util {
     }
   };
 
+  // * shorthand notation to create a rotation matrix
+  constexpr
+  rotation_matrix
+  operator,(
+    const axis ax,
+    const double angle
+  )
+  {
+    return rotation_matrix(ax, angle);
+  }
+
 }
 
 #endif
