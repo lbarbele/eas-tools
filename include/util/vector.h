@@ -216,7 +216,7 @@ namespace util {
       const vector<U>& v
     ) const
     {
-      other = v.on_frame(get_frame());
+      auto other = v.on_frame(get_frame());
       return {
         (*this)[1]*other[2] - (*this)[2]*other[1],
         (*this)[2]*other[0] - (*this)[0]*other[2],
