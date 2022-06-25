@@ -33,29 +33,26 @@ namespace util {
       return f;
     }
 
-    // * create frame from a single rotation around specified axis
+    // * create frame from a transformation matrix ("to" matrix) and a starting frame
     static frame_ptr create(
-      const axis ax,
-      const double angle
+      const square_matrix_d<3>& rot_to,
+      const frame_ptr& base_frame
     )
     {
       frame_ptr f(new frame());
-      f->m_to = rotation_matrix(ax, angle);
+      f->m_to = rot_to*base_frame->to();
       f->m_from = f->m_to.transpose();
       return f;
     }
 
-    // * create frame from a sequence of rotations
-    template <class... Args, std::enable_if_t<(sizeof...(Args) >= 2) && (sizeof...(Args)%2 == 0), bool> = true >
+    // * create frame from a single rotation around specified axis and a starting frame
     static frame_ptr create(
       const axis ax,
       const double angle,
-      Args... args
+      const frame_ptr& base_frame
     )
     {
-      auto f = create(args...);
-      f->m_to *= rotation_matrix(ax, angle);
-      return f;
+      return create( (ax, angle), base_frame );
     }
 
     // - Methods
@@ -68,9 +65,9 @@ namespace util {
     {return m_from;}
 
     // - Default frames
-    const inline static frame_ptr corsika_observer = create();
-    const inline static frame_ptr conex_observer = create(axis::z, -constants::pi/2.0);
-    const inline static frame_ptr standard = corsika_observer;
+    const inline static frame_ptr standard = create();
+    const inline static frame_ptr corsika_observer = standard;
+    const inline static frame_ptr conex_observer = create((axis::z, -constants::pi/2.0), standard);
 
   };
 
