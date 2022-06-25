@@ -101,22 +101,18 @@ namespace util {
     template <class U, class R = decltype(T{} * U{}), typename = enable_if_scalar_t<U>>
     vector<R> operator*(const U scalar) const
     {
-      return {
-        (*this)[0] * scalar,
-        (*this)[1] * scalar,
-        (*this)[2] * scalar
-      };
+      auto other = *this;
+      other *= scalar;
+      return other;
     }
 
     // * division by scalar
     template <class U, class R = decltype(T{} / U{}), typename = enable_if_scalar_t<U>>
-    vector<R> operator/(const T scalar) const
+    vector<R> operator/(const U scalar) const
     {
-      return {
-        (*this)[0] / scalar,
-        (*this)[1] / scalar,
-        (*this)[2] / scalar
-      };
+      auto other = *this;
+      other /= scalar;
+      return other;
     }
 
     // * unary plus operator
@@ -181,26 +177,18 @@ namespace util {
     template <class U, class R = decltype(T{} + U{})>
     vector<T> operator+(const vector<U>& v)
     {
-      const auto& other = v.on_frame(get_frame());
-      return {
-        (*this)[0] + other[0],
-        (*this)[1] + other[1],
-        (*this)[2] + other[2],
-        get_frame()
-      };
+      auto other = *this;
+      other += v;
+      return other;
     }
 
     // * vector subtraction
     template <class U, class R = decltype(T{} + U{})>
     vector<T> operator-(const vector<U>& v)
     {
-      const auto& other = v.on_frame(get_frame());
-      return {
-        (*this)[0] - other[0],
-        (*this)[1] - other[1],
-        (*this)[2] - other[2],
-        get_frame()
-      };
+      auto other = *this;
+      other -= v;
+      return other;
     }
 
     // * dot product
