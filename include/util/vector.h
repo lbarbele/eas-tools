@@ -175,20 +175,26 @@ namespace util {
 
     // * vector sum
     template <class U, class R = decltype(T{} + U{})>
-    vector<T> operator+(const vector<U>& v)
+    vector<R> operator+(const vector<U>& v) const
     {
-      auto other = *this;
-      other += v;
-      return other;
+      return {
+        (*this)[0] + v[0],
+        (*this)[1] + v[1],
+        (*this)[2] + v[2],
+        get_frame()
+      };
     }
 
     // * vector subtraction
     template <class U, class R = decltype(T{} + U{})>
-    vector<T> operator-(const vector<U>& v)
+    vector<R> operator-(const vector<U>& v) const
     {
-      auto other = *this;
-      other -= v;
-      return other;
+      return {
+        (*this)[0] - v[0],
+        (*this)[1] - v[1],
+        (*this)[2] - v[2],
+        get_frame()
+      };
     }
 
     // * dot product
