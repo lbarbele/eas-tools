@@ -18,9 +18,13 @@ namespace conex::extensions {
   public:
     file(const std::string& fname);
 
-    bool is_open() const;
-    event get_event(size_t pos);
-    size_t get_n_events() const;
+    event get_event(const size_t pos, const double threshold = 0.01);
+
+    bool is_open() const
+    {return IsOpen() && !IsZombie() && !TestBit(kRecovered);}
+
+    size_t get_n_events() const
+    {return m_event_count;}
   };
 
 } // namespace conex::extensions

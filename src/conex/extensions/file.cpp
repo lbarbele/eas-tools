@@ -42,16 +42,10 @@ namespace conex::extensions {
 
   }
 
-  bool
-  file::is_open()
-  const
-  {
-    return IsOpen() && !IsZombie() && !TestBit(kRecovered);
-  }
-
   event
   file::get_event(
-    size_t pos
+    const size_t pos,
+    const double threshold 
   )
   {
     auto suffix = std::to_string(pos);
@@ -66,15 +60,8 @@ namespace conex::extensions {
     auto interaction_tree = Get<TTree>(interaction_tree_name.c_str());
     auto seed_tree = Get<TTree>(seed_tree_name.c_str());
 
-    // the event object will own the trees
-    return event(particle_tree, projectile_tree, interaction_tree, seed_tree);
-  }
-
-  size_t
-  file::get_n_events()
-  const
-  {
-    return m_event_count;
+    // the event object is responsible to delete the trees
+    return event(particle_tree, projectile_tree, interaction_tree, seed_tree, threshold);
   }
 
 } // namespace conex::extensions

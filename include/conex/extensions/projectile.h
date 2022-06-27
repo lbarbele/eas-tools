@@ -3,100 +3,157 @@
 
 #include <cmath>
 
+#include <util/frame.h>
 #include <util/vector.h>
+#include <util/constants.h>
+#include <util/rotation_matrix.h>
 
 namespace conex::extensions {
 
   class projectile {
-    friend class event;
-
-  public:
-    double Energy = 0;         // dptl(1)
-    double Px = 0;             // dptl(2)
-    double Py = 0;             // dptl(3)
-    double Pz = 0;             // dptl(4)
-    double mass = 0;           // dptl(5)
-    double x = 0;              // dptl(6)
-    double y = 0;              // dptl(7)
-    double height = 0;         // dptl(8)
-    double time = 0;           // dptl(9)
-    double id = 0;             // dptl(10)
-    double weight = 0;         // dptl(11)
-    double generation = 0;     // dptl(12)
-    double slantTraversed = 0; // dptl(13)
-    double xShower = 0;        // dptl(14)
-    double yShower = 0;        // dptl(15)
-
-    int interactionCounter = 0;
-
-    double c0s = 0;
-    double c0xs = 0;
-    double s0s = 0;
-    double s0xs = 0;
-    double slantToImpact = 0;
   
+  // * data_t holds the data to read the projectile tree
+  public: struct data_t {
+      double Energy = 0;         // dptl(1)
+      double Px = 0;             // dptl(2)
+      double Py = 0;             // dptl(3)
+      double Pz = 0;             // dptl(4)
+      double mass = 0;           // dptl(5)
+      double x = 0;              // dptl(6)
+      double y = 0;              // dptl(7)
+      double height = 0;         // dptl(8)
+      double time = 0;           // dptl(9)
+      double id = 0;             // dptl(10)
+      double weight = 0;         // dptl(11)
+      double generation = 0;     // dptl(12)
+      double slantTraversed = 0; // dptl(13)
+      double xShower = 0;        // dptl(14)
+      double yShower = 0;        // dptl(15)
+      
+      int interactionCounter = 0;
+      
+      double c0s = 0;
+      double c0xs = 0;
+      double s0s = 0;
+      double s0xs = 0;
+      
+      double slantToImpact = 0;
+    };
+
+  private:
+    data_t m_data;
+    util::frame_ptr m_frame;
+    util::frame_ptr m_lab_frame;
+    util::vector_d m_position;
+    util::vector_d m_momentum;
+
   public:
 
-    util::vector get_position() const;
-    util::vector get_momentum() const;
+    // - Constructor
+    projectile(
+      const data_t& tree_data
+    )
+    : m_data(tree_data)
+    {
+      namespace ct = util::constants;
+      using util::axis;
 
+      // auxiliar quantities
+      const double r_obs = std::hypot(data().x, data().y);
+      const double dist_center = data().height + ct::earth_radius;
+      const double z = std::sqrt((dist_center+r_obs)*(dist_center-r_obs));
+
+      // the particle frame
+      const double phi = std::atan2(data().y,data().x);
+      const double theta_ea = std::asin(r_obs / dist_center);
+      m_frame = util::frame::create((axis::z, ct::pi/2.0 - phi)*(axis::x, theta_ea - ct::pi), util::frame::conex_observer);
+
+      // the lab frame (in which secondaries are produced)
+      const double phi_lab = std::atan2(data().s0xs, data().c0xs);
+      const double theta_lab = std::atan2(data().s0s, data().c0s);
+      m_lab_frame = util::frame::create((axis::x, -theta_lab)*(axis::z, -phi_lab), m_frame);
+
+      // position vector
+      m_position = util::vector_d(data().x, data().y, z, util::frame::conex_observer);
+
+      // momentum vector
+      m_momentum = util::vector_d(data().Px, data().Py, data().Pz, m_frame);
+    }
+
+    // - Direct access to tree data
+    const data_t& data() const
+    {return m_data;}
+
+    // - Formatted access to the projectile data
+
+    // * access to the conex "particle" frame
+    const util::frame_ptr& get_frame() const
+    {return m_frame;}
+
+    // * access to the conex "lab" frame, in which secondary momenta is defined
+    const util::frame_ptr& get_lab_frame() const
+    {return m_lab_frame;}
+
+    // * get position on arbitrary frame (default is conex observer frame) [m]
+    util::vector_d get_position(const util::frame_ptr& frame = util::frame::conex_observer) const
+    {return frame? m_position.on_frame(frame) : m_position;}
+
+    // * get momentum on arbitrary frame (default is conex particle frame) [GeV]
+    util::vector_d get_momentum() const
+    {return m_momentum;}
+
+    util::vector_d get_momentum(const util::frame_ptr& frame) const
+    {return m_momentum.on_frame(frame);}
+
+    // * get projectile time [s]
+    double get_time_s() const
+    {return data().time/util::constants::c;}
+
+    // * get projectile energy [GeV]
     const double& get_energy() const
-    {return Energy;}
+    {return data().Energy;}
 
-    const double& get_px() const
-    {return Px;}
-    const double& get_py() const
-    {return Py;}
-    const double& get_pz() const
-    {return Pz;}
-
+    // * get projectile energy [GeV]
     const double& get_mass() const
-    {return mass;}
+    {return data().mass;}
 
-    const double& get_x() const
-    {return x;}
-    const double& get_y() const
-    {return y;}
+    // * get projectile height [m]
     const double& get_height() const
-    {return height;}
+    {return data().height;}
 
-    const double& get_time() const
-    {return time;}
-
-    int get_id() const
-    {return id;}
-
+    // * get projectile weight, if thinning is enabled
     const double& get_weight() const
-    {return weight;}
+    {return data().weight;}
 
+    // * get projectile id as defined in conex (nexus)
+    int get_id_nexus() const
+    {return data().id;}
+
+    // * projectile generation
     int get_generation() const
-    {return generation;}
+    {return data().generation;}
 
+    // * accumulated slant depth traversed by projectile [g/cm^2]
     const double& get_slant_depth() const
-    {return slantTraversed;}
+    {return data().slantTraversed;}
 
-    const int& get_interaction_counter() const
-    {return interactionCounter;}
-
+    // * slant distance to the impact point [m]
     const double& get_distance_to_impact() const
-    {return slantToImpact;}
+    {return data().slantToImpact;}
 
+    // * projectile x position on the shower plane [m]
     const double& get_xshower() const
-    {return xShower;}
+    {return data().xShower;}
+
+    // * projectile y position on the shower plane [m]
     const double& get_yshower() const
-    {return yShower;}
+    {return data().yShower;}
 
-    // extra info
-    double get_r() const
-    {return std::hypot(x,y);}
-
-    double get_phip() const
-    {return std::atan2(y,x);}
-
-    double get_thetap() const
-    {return std::asin(get_r()/(height + 6371315.));}
+    // * interaction counter
+    const int& get_interaction_counter() const
+    {return data().interactionCounter;}
   };
 
-} // namespace conex::extensions
+}
 
-#endif // _conex_extensions_projectile_h
+#endif
