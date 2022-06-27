@@ -160,7 +160,7 @@ namespace util {
         +(*this)[1],
         +(*this)[2],
         get_frame()
-      }
+      };
     }
 
     // * unary minus operator
@@ -171,7 +171,7 @@ namespace util {
         -(*this)[1],
         -(*this)[2],
         get_frame()
-      }
+      };
     }
     // - Frame-dependent operations
 
