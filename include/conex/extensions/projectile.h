@@ -64,9 +64,9 @@ namespace conex::extensions {
       const double z = std::sqrt((dist_center+r_obs)*(dist_center-r_obs));
 
       // the particle frame
-      const double phi = std::atan2(data().y,data().x);
+      const double phi = std::atan2(data().y, data().x);
       const double theta_ea = std::asin(r_obs / dist_center);
-      m_frame = util::frame::create((axis::z, ct::pi/2.0 - phi)*(axis::x, theta_ea - ct::pi), util::frame::conex_observer);
+      m_frame = util::frame::create((axis::x, ct::pi - theta_ea)*(axis::z, phi- ct::pi/2.0), util::frame::conex_observer);
 
       // the lab frame (in which secondaries are produced)
       const double phi_lab = std::atan2(data().s0xs, data().c0xs);
