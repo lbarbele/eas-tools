@@ -126,7 +126,7 @@ namespace conex::extensions {
     {return data().weight;}
 
     // * get projectile id as defined in conex (nexus)
-    int get_id_nexus() const
+    int get_id() const
     {return data().id;}
 
     // * projectile generation
