@@ -15,7 +15,7 @@ namespace conex::extensions {
 
   public:
     // * build an event from the respective trees in the conex::extensions file
-    event(TTree* particle, TTree* projectile, TTree* interaction, TTree* seed, const double threshold);
+    event(TTree* particle, TTree* projectile, TTree* interaction, TTree* seed, const double threshold, const bool check = true);
 
     // * get the number of interactions in this event
     size_t get_n_interactions() const

@@ -45,7 +45,8 @@ namespace conex::extensions {
   event
   file::get_event(
     const size_t pos,
-    const double threshold 
+    const double threshold,
+    const bool check
   )
   {
     auto suffix = std::to_string(pos);
@@ -61,7 +62,7 @@ namespace conex::extensions {
     auto seed_tree = Get<TTree>(seed_tree_name.c_str());
 
     // the event object is responsible to delete the trees
-    return event(particle_tree, projectile_tree, interaction_tree, seed_tree, threshold);
+    return event(particle_tree, projectile_tree, interaction_tree, seed_tree, threshold, check);
   }
 
 } // namespace conex::extensions

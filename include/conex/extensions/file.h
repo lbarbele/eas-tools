@@ -18,7 +18,7 @@ namespace conex::extensions {
   public:
     file(const std::string& fname);
 
-    event get_event(const size_t pos, const double threshold = 0.01);
+    event get_event(const size_t pos, const double threshold = 0.01, const bool check = false);
 
     bool is_open() const
     {return IsOpen() && !IsZombie() && !TestBit(kRecovered);}
