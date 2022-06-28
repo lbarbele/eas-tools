@@ -3,6 +3,7 @@
 
 #include <conex/extensions/projectile.h>
 
+#include <util/constants.h>
 #include <util/vector.h>
 #include <util/frame.h>
 
@@ -87,6 +88,10 @@ namespace conex::extensions {
     // * get particle mass [GeV]
     const double& get_mass() const
     {return data().mass;}
+
+    // * get particle velocity [m/s]
+    util::vector_d get_velocity() const
+    {return get_momentum() * (util::constants::c/get_energy());}
 
     // * get particle id (conex/nexus code)
     const int& get_id() const
