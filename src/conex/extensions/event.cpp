@@ -158,7 +158,7 @@ namespace conex::extensions {
       // - consistency check: sum o secondary momenta must match projectile momentum
       const auto pproj = current_interaction.get_projectile().get_momentum();
       const double pdev = (psum-pproj).norm() / pproj.norm();
-      if (pdev > 1e-3 /* 0.1% */) {
+      if (pdev > 1e-2 /* 1% */) {
         std::stringstream str;
         str << "conex extensions momentum mismatch" << std::endl;
         str << "psum: " << psum << std::endl;
