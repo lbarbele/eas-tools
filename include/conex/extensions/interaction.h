@@ -27,7 +27,7 @@ namespace conex::extensions {
     };
 
   private:
-    std::unique_ptr<projectile> m_projectile;
+    std::shared_ptr<projectile> m_projectile;
     std::vector<particle> m_secondaries;
     data_t m_data;
 
@@ -44,7 +44,7 @@ namespace conex::extensions {
 
     // * set interaction projectile
     void set_projectile(const projectile::data_t& proj_data)
-    {m_projectile = std::make_unique<projectile>(proj_data);}
+    {m_projectile = std::make_shared<projectile>(proj_data);}
 
     // * add secondary particle to the list
     particle& add_particle(const particle::data_t& part_data)
