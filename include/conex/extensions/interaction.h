@@ -48,7 +48,7 @@ namespace conex::extensions {
 
     // * add secondary particle to the list
     particle& add_particle(const particle::data_t& part_data)
-    {return m_secondaries.emplace_back(part_data, get_lab_frame());}
+    {return m_secondaries.emplace_back(part_data, get_lab_frame(), m_projectile);}
 
     // - Direct access to tree data
     const data_t& data() const

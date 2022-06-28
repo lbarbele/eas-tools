@@ -1,6 +1,8 @@
 #ifndef _conex_extensions_particle_h
 #define _conex_extensions_particle_h
 
+#include <conex/extensions/projectile.h>
+
 #include <util/vector.h>
 #include <util/frame.h>
 
@@ -40,21 +42,37 @@ namespace conex::extensions {
   private:
     data_t m_data;
     util::frame_ptr m_frame;
+    std::shared_ptr<projectile> m_precursor;
 
   public:
 
     // - Constructor
     particle(
       const data_t& tree_data,
-      const util::frame_ptr& lab_frame
+      const util::frame_ptr& lab_frame,
+      const std::shared_ptr<projectile> precursor
     )
     : m_data(tree_data),
-      m_frame(lab_frame)
+      m_frame(lab_frame),
+      m_precursor(precursor)
     {}
 
     // - Direct access to tree data
     const data_t& data() const
     {return m_data;}
+
+    // - Access to the precursor projectile and other data
+    const projectile& get_precursor() const
+    {return *m_precursor;}
+
+    const util::frame_ptr& get_frame() const
+    {return m_frame;}
+
+    util::vector_d get_formation_point() const
+    {return get_precursor().get_position();}
+
+    double get_formation_time_s() const
+    {return get_precursor().get_time_s();}
 
     // - Formatted access to the particle data
 

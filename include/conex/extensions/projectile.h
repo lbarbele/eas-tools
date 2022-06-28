@@ -94,16 +94,13 @@ namespace conex::extensions {
     const util::frame_ptr& get_lab_frame() const
     {return m_lab_frame;}
 
-    // * get position on arbitrary frame (default is conex observer frame) [m]
-    util::vector_d get_position(const util::frame_ptr& frame = util::frame::conex_observer) const
-    {return frame? m_position.on_frame(frame) : m_position;}
+    // * get position [m]
+    util::vector_d get_position() const
+    {return m_position;}
 
-    // * get momentum on arbitrary frame (default is conex particle frame) [GeV]
+    // * get momentum [GeV]
     util::vector_d get_momentum() const
     {return m_momentum;}
-
-    util::vector_d get_momentum(const util::frame_ptr& frame) const
-    {return m_momentum.on_frame(frame);}
 
     // * get projectile time [s]
     double get_time_s() const
