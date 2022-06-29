@@ -61,7 +61,7 @@ namespace conex::extensions {
       // auxiliar quantities
       const double r_obs = std::hypot(data().x, data().y);
       const double dist_center = data().height + ct::earth_radius;
-      const double z = std::sqrt((dist_center+r_obs)*(dist_center-r_obs));
+      const double z = std::sqrt((dist_center+r_obs)*(dist_center-r_obs)) - ct::earth_radius;
 
       // the particle frame
       const double phi = std::atan2(data().y, data().x);
