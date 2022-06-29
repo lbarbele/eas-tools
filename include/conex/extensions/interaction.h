@@ -31,6 +31,9 @@ namespace conex::extensions {
     std::vector<particle> m_secondaries;
     data_t m_data;
 
+    double m_elasticity = -1;
+    int m_leading_index = -1;
+
   public:
 
     // - Constructor and setters
@@ -48,7 +51,16 @@ namespace conex::extensions {
 
     // * add secondary particle to the list
     particle& add_particle(const particle::data_t& part_data)
-    {return m_secondaries.emplace_back(part_data, get_lab_frame(), m_projectile);}
+    {
+      auto& new_part = m_secondaries.emplace_back(part_data, get_lab_frame(), m_projectile);
+
+      if (m_leading_index < 0 || new_part.get_energy() > get_leading().get_energy()) {
+        m_elasticity = new_part.get_energy()/get_lab_energy();
+        m_leading_index = m_secondaries.size() - 1;
+      }
+
+      return new_part;
+    }
 
     // - Direct access to tree data
     const data_t& data() const
@@ -87,6 +99,17 @@ namespace conex::extensions {
 
     const std::array<int, 3>& get_seeds() const
     {return data().seeds;}
+
+    // - Additional data
+
+    const particle& get_leading() const
+    {return get_secondary(m_leading_index);}
+
+    double get_inelasticity() const
+    {return 1 - m_elasticity;}
+
+    double get_elasticity() const
+    {return m_elasticity;}
 
     // - Access to projectile/secondary particles
 
