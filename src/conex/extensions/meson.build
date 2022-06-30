@@ -1,6 +1,7 @@
 conex_extension_sources = [
   'file.cpp',
-  'event.cpp'
+  'event.cpp',
+  'interaction_tree.cpp'
 ]
 
 libconexextensions = library(

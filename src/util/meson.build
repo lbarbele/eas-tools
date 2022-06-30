@@ -1,6 +1,5 @@
 util_sources = [
   'gaisser_hillas_fit.cpp',
-  'vector.cpp',
   'math.cpp'
 ]
 
