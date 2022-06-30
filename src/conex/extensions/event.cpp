@@ -115,7 +115,7 @@ namespace conex::extensions {
       // create a new interaction from the last read interaction data and add it to
       // the interaction vetor
       interaction_ptr current_interaction = std::make_shared<interaction>(interaction_data);
-      m_interactions.emplace_back(interaction_data);
+      m_interactions.emplace_back(current_interaction);
 
       // * projectile
       // read the current projectile
