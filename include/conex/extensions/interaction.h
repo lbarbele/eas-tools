@@ -74,10 +74,10 @@ namespace conex::extensions {
     // - Access to conex frames
 
     const util::frame_ptr& get_frame() const
-    {return get_projectile().get_frame();}
+    {return get_projectile()->get_frame();}
 
     const util::frame_ptr& get_lab_frame() const
-    {return get_projectile().get_lab_frame();}
+    {return get_projectile()->get_lab_frame();}
 
     // - Formatted access to the tree data
 
@@ -118,8 +118,8 @@ namespace conex::extensions {
 
     // - Access to projectile/secondary particles
 
-    const projectile& get_projectile() const
-    {return *m_projectile;}
+    const projectile_ptr& get_projectile() const
+    {return m_projectile;}
 
     const particle_ptr get_secondary(size_t pos) const
     {return m_secondaries[pos];}

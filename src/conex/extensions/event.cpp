@@ -168,7 +168,7 @@ namespace conex::extensions {
 
       // - consistency check: sum o secondary momenta must match projectile momentum
       if (check) {
-        const auto pproj = current_interaction->get_projectile().get_momentum();
+        const auto pproj = current_interaction->get_projectile()->get_momentum();
         const double pdev = (psum-pproj).norm() / pproj.norm();
         if (pdev > 1e-2 /* 1% */) {
           std::stringstream str;
