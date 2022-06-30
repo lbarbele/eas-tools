@@ -10,6 +10,9 @@
 
 namespace conex::extensions {
 
+  class projectile;
+  using projectile_ptr = std::shared_ptr<projectile>;
+
   class projectile {
   
   // * data_t holds the data to read the projectile tree

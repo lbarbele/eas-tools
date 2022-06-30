@@ -1,6 +1,8 @@
 #ifndef _conex_extensions_particle_h
 #define _conex_extensions_particle_h
 
+#include <memory>
+
 #include <conex/extensions/projectile.h>
 
 #include <util/constants.h>
@@ -8,6 +10,9 @@
 #include <util/frame.h>
 
 namespace conex::extensions {
+
+  class particle;
+  using particle_ptr = std::shared_ptr<particle>;
 
   class particle {
 

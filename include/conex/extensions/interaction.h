@@ -12,6 +12,9 @@
 
 namespace conex::extensions {
 
+  class interaction;
+  using interaction_ptr = std::shared_ptr<interaction>;
+
   class interaction {
 
   // * data_t holds the data to read the interaction and seeds trees
