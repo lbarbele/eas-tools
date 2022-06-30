@@ -48,7 +48,7 @@ namespace conex::extensions {
   private:
     data_t m_data;
     util::frame_ptr m_frame;
-    std::shared_ptr<projectile> m_precursor;
+    projectile_ptr m_precursor;
 
   public:
 
@@ -68,17 +68,17 @@ namespace conex::extensions {
     {return m_data;}
 
     // - Access to the precursor projectile and other data
-    const projectile& get_precursor() const
-    {return *m_precursor;}
+    const projectile_ptr& get_precursor() const
+    {return m_precursor;}
 
     const util::frame_ptr& get_frame() const
     {return m_frame;}
 
     util::vector_d get_formation_point() const
-    {return get_precursor().get_position();}
+    {return get_precursor()->get_position();}
 
     double get_formation_time_s() const
-    {return get_precursor().get_time_s();}
+    {return get_precursor()->get_time_s();}
 
     // - Formatted access to the particle data
 
