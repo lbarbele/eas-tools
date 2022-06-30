@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
   std::cout
     << std::setw(6) << stack.size()
     << std::setw(13) << shower.get_energy_gev()
-    << std::setw(13) << primaryParticle->get_height()
+    << std::setw(13) << 100 * primaryParticle->get_height()
     << std::setw(13) << shower.get_zenith_deg()
     << std::setw(13) << std::fmod(shower.get_azimuth_deg() + 90, 360)
     << std::endl;
