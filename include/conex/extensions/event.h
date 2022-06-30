@@ -27,6 +27,10 @@ namespace conex::extensions {
 
     // - Interaction iterators
 
+    // * access to the interaction vector
+    const std::vector<interaction>& get_interactions() const
+    {return m_interactions;}
+
     // * standard iterators
     auto begin() {return m_interactions.begin();}
     auto end() {return m_interactions.end();}
