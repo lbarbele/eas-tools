@@ -3,409 +3,211 @@
 #include <string>
 #include <array>
 #include <list>
-#include <algorithm>
-#include <cctype>
-#include <regex>
+#include <functional>
+#include <stdexcept>
+
+#include <tclap/CmdLine.h>
 
 #include <conex/file.h>
 #include <conex/extensions/file.h>
+#include <conex/extensions/interaction_tree.h>
 #include <util/vector.h>
 
-// use aliases to avoid long namespace chains
-namespace ext {using namespace conex::extensions;}
-namespace cx  {using namespace conex;}
+int idToCorsika(const int idConex);
 
-// a struct encapsulating the SECPAR data
-struct secpar_t : public std::array<double, 17> {
-  // create a secpar object given a mother projectile and its child secondary particle (also a t0 value in seconds)
-  static secpar_t create(const ext::projectile& prj, const ext::particle& prt, const double t);
-};
+int main(int argc, char** argv) {
 
-// a stack is a list of secpar_t's
-struct stack_t : public std::list<secpar_t> {};
-
-// secpar printer
-template<class CharT> std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& stream, const secpar_t& p);
-// conex rotate subroutine
-util::vector rotate(const util::vector& v, const double st, const double ct, const double sp, const double cp);
-// function that actually creates a stack
-stack_t makeStack(cx::shower& shower, ext::event& event, const double threshold);
-// compare a particle and a projectile
-bool compare(const ext::projectile& mother, const ext::particle& child, const ext::projectile& proj);
-// convert CONEX (NEXUS) particle ID to CORSIKA ID
-int idToCorsika(const int id);
-
-int
-main(
-  int argc,
-  char** argv
-)
-{
-  // parse command line
-  // syntax is: ./make_stack conex_standard_file.root conex_extensions_file.root eventNumber
-  if (argc != 4) {
-    std::cerr << "syntax error!" << std::endl;
-    return 1;
-  }
-
-  // open the conex file and check
-  cx::file cxFile(argv[1]);
-  if (!cxFile.is_open()) {
-    std::cerr << "bad conex file!" << std::endl;
-    return 1;
-  }
-
-  // conex extensions file
-  ext::file extFile(argv[2]);
-  if (!extFile.is_open()) {
-    std::cerr << "bad conex extensions file!" << std::endl;
-    return 1;
-  }
-
-  // get the event number
-  const std::string str = argv[3];
-  if (!std::regex_match(str, std::regex("[-+]?[0-9]+"))) {
-    std::cerr << "bad event nubmer " << str << std::endl;
-    return 1;
-  }
-
-  const int offset = std::stoi(argv[3]);
-
-  if (offset >= cxFile.get_n_showers() || offset+cxFile.get_n_showers() < 0) {
-    std::cerr << "event number is larger than the number of events" << std::endl;
-    return 1;
-  } 
-
-  const uint ievent = offset > 0? offset : cxFile.get_n_showers() + offset;
+  // * aliases
   
-  if (ievent >= extFile.get_n_events()) {
-    std::cerr << "event number is larger than the number of events" << std::endl;
+  namespace cx = conex;
+  namespace ce = conex::extensions;
+
+  using secpar_t = std::array<double, 17>;
+
+  // * parse the command line
+
+  TCLAP::CmdLine cmdLine("make_stack");
+
+  TCLAP::ValueArg<std::string> conexFilePath("c", "conex-file",
+    "CONEX default root file containing shower data, as wrote by the CxRoot interface.",
+    true, "", "conex_file.root", cmdLine);
+
+  TCLAP::ValueArg<std::string> extensionsFilePath("e", "extensions-file",
+    "CONEX extensions file containing information about the leading interactions"
+    ", activated by the CONEX_EXTENSIONS macro in CONEX",
+    true, "", "extensions_file.root", cmdLine);
+
+  TCLAP::ValueArg<double> thresholdRatio("t", "threshold",
+    "Minimum fraction of the primary energy required for an interaction to be"
+    "analyzed. Interactions with energy below this threshold will be dismissed"
+    " and particles below this threshold will go directly to the stack",
+    false, 0.05, "threshold", cmdLine
+  );
+
+  TCLAP::ValueArg<int> eventNumber("n", "event-number",
+    "Number (index) of event in the CONEX files to be analyzed. Only one event can"
+    " be declared. Negative values are interpreted as values starting from the end."
+    " That is, 0 is the first event in the file and -1 is the last.",
+    true, 0, "index", cmdLine
+  );
+
+  cmdLine.parse(argc, argv);
+
+  if (thresholdRatio < 0) {
+    std::cout << "threshold ratio must be >= 0. instead it was " << thresholdRatio << std::endl;
     return 1;
   }
 
-  // get the event
-  auto shower = cxFile.get_shower(ievent);
-  auto event = extFile.get_event(ievent);
+  // * open input files and check
 
-  // create the stack
-  auto stack = makeStack(shower, event, 0.005);
-
-  // check the stack
-  if (stack.empty()) {
-    std::cerr << "failed to create the stack. it is empty!" << std::endl;
+  cx::file cxFile(conexFilePath.getValue());
+  if (!cxFile.is_open()) {
+    std::cerr << "unable to open CONEX file " << conexFilePath.getValue() << std::endl;
     return 1;
   }
 
-  // print the stack header containing
-  // - number of particles (required by CORSIKA)
-  // - total energy (required by CORSIKA) [GeV]
-  // - first interaction altitude [cm]
-  // - zenith angle of shower axis [deg]
-  // - azimuth angle of shower axis [deg]
-  // the first three fields are intented to be used in the corsika input data cards
+  ce::file cxPartFile(extensionsFilePath.getValue());
+  if (!cxPartFile.is_open()) {
+    std::cerr << "unable to open CONEX extensions file " << extensionsFilePath.getValue() << std::endl;
+    return 1;
+  }
+
+  // * check index and read the event
+
+  const unsigned int trueEvtIndex = eventNumber >= 0? eventNumber : eventNumber + cxPartFile.get_n_events();
+
+  if (trueEvtIndex >= cxPartFile.get_n_events()) {
+    std::cerr << "bad event index " << eventNumber << std::endl;
+    std::cerr << "file has " << cxPartFile.get_n_events() << " events" << std::endl;
+    return 1;
+  }
+
+  const cx::shower& shower = cxFile.get_shower(trueEvtIndex);
+  const ce::event& evt = cxPartFile.get_event(trueEvtIndex, thresholdRatio, false);
+
+  // * get primary interaction data
+  ce::interaction_ptr primaryInteraction = evt.get_interaction(0);
+  ce::projectile_ptr primaryParticle = primaryInteraction->get_projectile();
+  const double primaryEnergy = primaryParticle->get_energy();
+  const double energyThreshold = primaryEnergy * thresholdRatio;
+  const double t0 = primaryInteraction->get_projectile()->get_time_s();
+  
+  // * compute the interaction tree
+  ce::interaction_tree_ptr tree = ce::interaction_tree::create(evt, energyThreshold);
+
+  std::list<secpar_t> stack;
+
+  // * loop over the interaction tree to compute the CORSIKA stack
+  tree->apply_recursive([&](const ce::interaction_tree& tree){
+
+    // get the projectile of the current interaction
+    ce::interaction_ptr interaction = tree.get_interaction();
+    ce::projectile_ptr proj = interaction->get_projectile();
+    
+    // * definition of the corsika particle frame
+
+    // position in the CONEX observer frame: compute the azimuthal angle
+    const auto pos_cnx = proj->get_position().on_frame(util::frame::conex_observer);
+
+    const double x_cnx = pos_cnx[0];
+    const double y_cnx = pos_cnx[1];
+    const double z_cnx = pos_cnx[2];
+
+    const double r_cnx = std::hypot(x_cnx, y_cnx);
+
+    const double phi_cnx = r_cnx > 1e-10? std::atan2(y_cnx, x_cnx) : 0;
+
+    // rotation matrix connecting CONEX particle frame to CORSIKA particle frame
+    const auto to_corsika = (util::axis::y, util::constants::pi) * (util::axis::x, phi_cnx);
+
+    // build the corsika particle frame based on the conex particle frame
+    util::frame_ptr corsika_part_frame = util::frame::create(to_corsika, proj->get_frame());
+
+    // * compute parameters common to all secondary particles
+    secpar_t secpar;
+
+    // true particle height [cm]
+    secpar[5] = 100 * proj->get_height();
+
+    // accumulated time since the first interaction [s]
+    secpar[6] = proj->get_time_s() - t0;
+
+    // zenital angle of particle position as measured from earth center
+    const double sin_theta_ea = r_cnx / (proj->get_height() + util::constants::earth_radius);
+    const double cos_theta_ea = (z_cnx + util::constants::earth_radius) / (proj->get_height() + util::constants::earth_radius);
+
+    const double theta_ea = std::asin(sin_theta_ea);
+
+    // particle position in CORSIKA curved coordinates (following earth's curvature) [cm]
+    const double phi_csk = phi_cnx - util::constants::pi / 2.0;
+    const double r_csk = 100 * util::constants::earth_radius * theta_ea;
+    secpar[7] = std::cos(phi_csk) * r_csk;
+    secpar[8] = std::sin(phi_csk) * r_csk;
+
+    // particle generation
+    secpar[9] = 1 + tree.get_generation();
+
+    // level of the last interaction [cm]
+    secpar[10] = 100 * proj->get_height();
+
+    // polarization (not used)
+    secpar[11] = 0;
+    secpar[12] = 0;
+
+    // particle weight
+    secpar[13] = proj->get_weight();
+
+    // apparent height (above sea level) [cm]
+    secpar[14] = 100 * z_cnx;
+
+    // cosine of apparent polar angle of particle
+    secpar[15] = z_cnx/pos_cnx.norm();
+
+    // cosine of polar angle measured at earth center
+    secpar[16] = cos_theta_ea;
+
+    // * loop over final products of the current interaction
+    for (const ce::particle_ptr& particle : tree.get_final_products()) {
+      // ! particle ID
+      secpar[0] = idToCorsika(particle->get_id());
+
+      // gamma factor (or energy, if particle is massless)
+      secpar[1] = particle->get_energy() * (particle->get_mass() > 0? particle->get_mass() : 1);
+
+      // particle direction in CORSIKA particle frame
+      const auto direction_corsika = particle->get_momentum().on_frame(corsika_part_frame).normalize(1);
+      secpar[2]  = -direction_corsika[2];
+      secpar[3]  = direction_corsika[0];
+      secpar[4]  = direction_corsika[1];
+
+      // add to the stack
+      stack.push_back(secpar);
+    }
+
+  });
+
+  // * widths to print secpar fields
+  std::array<size_t, 17> field_widths = {6, 13, 13, 13, 13, 13, 13, 13, 13, 3, 13, 3, 3, 3, 13, 13, 13};
+
+  // * print the stackin file header
   std::cout
-    << std::setw(13) << stack.size()
+    << std::setw(6) << stack.size()
     << std::setw(13) << shower.get_energy_gev()
-    << std::setw(13) << event.get_interaction(0).get_projectile().get_height()*100
+    << std::setw(13) << primaryParticle->get_height()
     << std::setw(13) << shower.get_zenith_deg()
     << std::setw(13) << std::fmod(shower.get_azimuth_deg() + 90, 360)
     << std::endl;
 
-  // print all particles in the stack
-  for (auto& secpar : stack) {
-    std::cout << secpar << std::endl;
+  // * print the stack
+  for (const auto& secpar : stack) {
+    for (size_t i = 0; i < secpar.size(); ++i) {
+      std::cout << std::setw(field_widths[i]) << secpar[i];
+    }
+    std::cout << std::endl;
   }
 
   return 0;
-}
-
-
-
-template<class CharT>
-std::basic_ostream<CharT>&
-operator<<(
-  std::basic_ostream<CharT>& stream,
-  const secpar_t& p
-)
-{
-  for (const auto& x : p) {stream << std::setw(13) << x;}
-  return stream;
-}
-
-
-
-util::vector
-rotate(
-  const util::vector& v,
-  const double st,
-  const double ct,
-  const double sp,
-  const double cp
-)
-{
-  return {
-     cp*v[0] + ct*sp*v[1] + st*sp*v[2],
-    -sp*v[0] + ct*cp*v[1] + st*cp*v[2],
-           0 -    st*v[1] +    ct*v[2]
-  };
-}
-
-
-
-stack_t
-makeStack(
-  cx::shower& shower,
-  ext::event& event,
-  const double threshold
-)
-{
-  // the stack to be filled
-  stack_t stack;
-
-  // consistency checks
-  double esum = 0;
-  util::vector psum = {0,0,0};
-
-  // time of the first interaction
-  const double t0 = event.get_interaction(0).get_projectile().get_time() / util::constants::c;
-
-  // create a list of all interactions except the first one
-  std::list<ext::interaction> remaining;
-  for (int i = 1; i < event.get_n_interactions(); ++i) {
-    remaining.push_back(event.get_interaction(i));
-  }
-
-  // start a queue of interesting interacions, whose secondaries will either:
-  // - be searched as a projectile of the remaining interactions, making such
-  //   interaction enter into this queue, or
-  // - be sent to the stack, if not participating of any other interaction as
-  //   a projectile
-  // we start this queue with the first interaction only
-  std::list<ext::interaction> queue{event.get_interaction(0)};
-
-  // analyze each interaction in the queue until it is empty
-  while (!queue.empty()) {
-    // get a reference to the current mother interaction
-    const auto& interaction = queue.front();
-
-    // get the mother projectile
-    const auto& mother = interaction.get_projectile();
-
-    // now, loop over all secondaries emerging from this interaction and check
-    // if they participate in some other interaction
-    for (const auto& child : interaction) {
-
-      // some particles have zero momenta. skip them
-      if (child.get_momentum().norm() <= 0) {
-        continue;
-      }
-
-      // this flag indicates if we have found the current child, secondary particle
-      // as a projectile in another interaction
-      bool found = false;
-
-      // we only look for particles whose energy is above a certain threshold, given
-      // as a fraction of the shower energy
-      if (child.get_energy() > threshold * shower.get_energy_gev()) {
-
-        // iterate over the remaining interactions to search for a projectile that matches
-        // the current child particle
-        auto it = remaining.begin();
-        while (it != remaining.end()) {
-          // get the projectile of this interaction
-          const auto& proj = it->get_projectile();
-
-          // check if the projectile matches the characteristics of the child particle
-          const bool isSame = compare(mother, child, proj);
-
-          // if there is a match between the particle and the projectile, then
-          // - add the child interaction to the queue of interactions to be analyzed
-          // - erase the child interaction from the remaining list
-          // - set the "found" flag to true, indicating we have found the child interaction
-          // - break the loop over the remaining interactions
-          // otherwise, simply continue the loop and look into the next interaction
-          if (isSame) {
-            queue.push_back(*it);
-            it = remaining.erase(it);
-            found = true;
-            break;
-          } else {
-            ++it;
-          }
-        } // loop over remaining interactions
-
-      } // if (energy cut)
-
-      // if the particle hasn't been found in any other interaction, create a secpar_t
-      // object from it, corresponding to CORSIKA's secpar fields and put it into the stack
-      if (!found) {
-        esum += child.get_energy();
-        psum += rotate(child.get_momentum(), mother.s0s, mother.c0s, mother.s0xs, mother.c0xs).to_obs(mother.get_phip(), mother.get_thetap());
-        stack.push_back(secpar_t::create(mother, child, t0));
-      }
-
-    } // loop over child particles
-
-
-    // pop the current mother interaction from the queue
-    queue.pop_front();
-  }
-
-  //
-  // consistency checks of energy/momentum
-  //
-  const double energyDev = esum/shower.get_energy_gev() - 1;
-  if (std::fabs(energyDev) > 1e-5) {
-    std::cerr << "warning: bad energy sum. deviation is of " << 100*energyDev <<  "%" << std::endl;
-    return stack_t();
-  }
-
-  const auto pprim = event.get_interaction(0).get_projectile().get_momentum();
-  if ((psum-pprim).norm()/pprim.norm() > 1e-5) {
-    std::cerr << "warning: bad p sum " << std::endl;
-    std::cerr << (psum-pprim)/pprim.norm() << std::endl;
-    return stack_t();
-  }
-  
-  return stack;
-}
-
-
-
-bool
-compare(
-  const ext::projectile& mother,
-  const ext::particle& child,
-  const ext::projectile& proj
-)
-{
-  static const double tolerance = 1e-5;
-
-  // first thing is to check IDs
-  if (proj.get_id() != child.get_id()) {
-    return false;
-  }
-
-  // also, check energy
-  const double dev_energy = proj.get_energy()/child.get_energy() - 1;
-  if (std::fabs(dev_energy) > tolerance) {
-    return false;
-  }
-
-  // check momenta (in observer frame)
-  const auto ppart = rotate(child.get_momentum(), mother.s0s, mother.c0s, mother.s0xs, mother.c0xs).to_obs(mother.get_phip(), mother.get_thetap());
-  const auto pproj = proj.get_momentum();
-
-  const double pdev = (pproj-ppart).norm()/ppart.norm();
-  if (std::fabs(pdev) > tolerance) {
-    return false;
-  }
-
-  // check position (in observer frame)
-  auto posproj = proj.get_position();
-  auto pospart = mother.get_position() + (ppart/child.get_energy()) * (proj.get_time() - mother.get_time());
-
-  const double rdev = (posproj - pospart).norm()/pospart.norm();
-  if (std::fabs(rdev) > tolerance) {
-    return false;
-  }
-
-  return true;
-}
-
-
-
-secpar_t
-secpar_t::create(
-  const ext::projectile& proj,
-  const ext::particle& part,
-  const double tStart
-)
-{
-  // the secpar object that will be filled, then returned
-  secpar_t secpar;
-
-  // some constants we use below
-  using util::constants::earth_radius;
-  using util::constants::c;
-
-  // * compute everyting in CONEX units (distance in m, id from NEXUS)
-  // * then convert to CORSIKA when copying to secpar below
-
-  // particle's CONEX id
-  const double id = part.get_id();
-
-  // particle's generation
-  const double gen = proj.get_generation() + 1;
-
-  // energy and mass (both in GeV)
-  const double mass = part.get_mass();
-  const double energy = part.get_energy();
-
-  // the Lorentz factor
-  const double gammaFactor = mass > 0? energy/mass : energy;
-
-  // time since tStart
-  const double t = proj.get_time() / c - tStart;
-
-  // particle's position in the observer frame
-  const double x = proj.get_x();      // x coordinate in cartesian frame with origin in the shower core
-  const double y = proj.get_y();      // y coordinate in cartesian frame with origin in the shower core
-  const double r = proj.get_r();      // sqrt(x*x + y*y)
-  const double h = proj.get_height(); // height a.s.l. (measured in the line that connects the particle position and the Earth center)
-
-  // sine/cosine of the projection of the particle position on the ground
-  const double sinp = y/r;
-  const double cosp = x/r;
-  
-  // particle momentum in its own frame. this frame follows from the definition of
-  // the curved atmosphere coordinates both in corsika and conex. this frame is specified by:
-  // - z axis points from the particle position towards the Earth center
-  // - y axis is contained in the plane that contains the z axis and the shower core position
-  // - x axis is given assuming the frame is right-handed
-  // the values of s0s, c0s, s0xs, c0xs are stored by CONEX in the extensions file to
-  // allow for this rotation. originally, the particle momentum is given in the interaction frame,
-  // in which the z axis coincides with the projectile moving direction
-  const auto p = rotate(part.get_momentum(), proj.s0s, proj.c0s, proj.s0xs, proj.c0xs);
-
-  // particle direction in CONEX
-  const auto pNorm = p / p.norm();
-  // particle direction in CORSIKA (simple rotation around the z axis)
-  const auto pNormRot = util::vector::to_obs(pNorm, sinp, cosp, 0.0, 1.0);
-
-  // particle position in CORSIKA's curved atmosphere:
-  // - distance between particle and Earth center
-  const double distCenter = h + earth_radius;
-  // - apparent height, measured in the line the connects the shower core position and the earth center
-  const double happ = std::sqrt((distCenter-r)*(distCenter+r)) - util::constants::earth_radius;
-  // - zenith of particle position in a frame at the Earth center
-  const double costea = (happ + earth_radius) / distCenter;
-  // - distance between shower core and projection of the particle position at Earth, considering Earth's curvature
-  const double rCurved = earth_radius * std::acos(costea);
-
-
-  secpar[0]  = idToCorsika(id);
-  secpar[1]  = gammaFactor;
-  secpar[2]  = pNorm[2];     // the z axis in CORSIKA coincides with the z axis in CONEX
-  secpar[3]  =  pNormRot[1]; // a rotation around the z axis of (pi/2) is applied to obtain
-  secpar[4]  = -pNormRot[0]; // CORSIKA's coordinates as a function of CONEX's ones
-  secpar[5]  = h*100;        // altitude.
-  secpar[6]  = t;            // time since tStart
-  secpar[7]  =  rCurved * sinp * 100; // x and y coordinates in CORSIKA is measured along the Earth surface
-  secpar[8]  = -rCurved * cosp * 100; // instead of along a plane observation level as in CONEX
-  secpar[9]  = gen;          // particle's generation is gen_proj + 1
-  secpar[10] = h*100;        // level of last interaction, same as particle's height
-  secpar[11] = 0;            // polarization, not used
-  secpar[12] = 0;            // polarization, not used
-  secpar[13] = 1;            // thinning weight is simply one. we don't use thinning in CONEX
-  secpar[14] = happ * 100;   // apparent height
-  secpar[15] = -1;           // apparent zenith angle of particle position (takes into account obs. level, computed in CORSIKA)
-  secpar[16] = costea;       // cosine of zenith of particle position for a frame at the earth center
-
-  return secpar;
-}
-
-
+};
 
 int
 idToCorsika(
