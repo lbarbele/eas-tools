@@ -112,9 +112,10 @@ namespace conex::extensions {
         continue;
       }
 
-      // push interaction to the interaction stack (still without secondary list) and
-      // retrieve a reference to it
-      interaction& current_interaction = m_interactions.emplace_back(interaction_data);
+      // create a new interaction from the last read interaction data and add it to
+      // the interaction vetor
+      interaction_ptr current_interaction = std::make_shared<interaction>(interaction_data);
+      m_interactions.emplace_back(interaction_data);
 
       // * projectile
       // read the current projectile
@@ -126,7 +127,7 @@ namespace conex::extensions {
       }
 
       // add projectile to the current interaction
-      current_interaction.set_projectile(projectile_data);
+      current_interaction->set_projectile(projectile_data);
 
       // - consistency check: ensure projectile and interaction have the same counter
       if (check && projectile_data.interactionCounter != interaction_data.interactionCounter) {
@@ -137,11 +138,11 @@ namespace conex::extensions {
       // get iterator for the particles in the current interaction, then loop
       // over all particles of this interaction and add them to the interaction
       // object
-      const auto multiplicity = current_interaction.get_multiplicity();
+      const auto multiplicity = current_interaction->get_multiplicity();
       const long long ipart_end = ipart + multiplicity;
 
       double esum = 0;
-      util::vector_d psum(0, 0, 0, current_interaction.get_frame());
+      util::vector_d psum(0, 0, 0, current_interaction->get_frame());
       
       while (ipart < ipart_end) {
         particle_tree->GetEntry(ipart++);
@@ -151,7 +152,7 @@ namespace conex::extensions {
           throw std::runtime_error("conex extensions particle/interaction counter mismatch");
         }
 
-        auto& current_particle = current_interaction.add_particle(particle_data);
+        auto& current_particle = current_interaction->add_particle(particle_data);
 
         // total energy and momentum for consistency check
         if (check) {
@@ -167,7 +168,7 @@ namespace conex::extensions {
 
       // - consistency check: sum o secondary momenta must match projectile momentum
       if (check) {
-        const auto pproj = current_interaction.get_projectile().get_momentum();
+        const auto pproj = current_interaction->get_projectile().get_momentum();
         const double pdev = (psum-pproj).norm() / pproj.norm();
         if (pdev > 1e-2 /* 1% */) {
           std::stringstream str;

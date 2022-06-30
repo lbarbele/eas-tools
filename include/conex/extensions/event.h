@@ -11,7 +11,7 @@ namespace conex::extensions {
 
   class event {
   private:
-    std::vector<interaction> m_interactions;
+    std::vector<interaction_ptr> m_interactions;
 
   public:
     // * build an event from the respective trees in the conex::extensions file
@@ -22,13 +22,13 @@ namespace conex::extensions {
     {return m_interactions.size();}
 
     // * get interaction at index pos
-    const interaction& get_interaction(size_t pos) const
+    const interaction_ptr& get_interaction(size_t pos) const
     {return m_interactions.at(pos);}
 
     // - Interaction iterators
 
     // * access to the interaction vector
-    const std::vector<interaction>& get_interactions() const
+    const std::vector<interaction_ptr>& get_interactions() const
     {return m_interactions;}
 
     // * standard iterators
