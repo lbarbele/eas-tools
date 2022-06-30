@@ -30,12 +30,10 @@ namespace conex::extensions {
     };
 
   private:
-    std::shared_ptr<projectile> m_projectile;
-    std::vector<particle> m_secondaries;
+    projectile_ptr m_projectile;
+    std::vector<particle_ptr> m_secondaries;
+    particle_ptr m_leading;
     data_t m_data;
-
-    double m_elasticity = -1;
-    int m_leading_index = -1;
 
   public:
 
@@ -53,16 +51,20 @@ namespace conex::extensions {
     {m_projectile = std::make_shared<projectile>(proj_data);}
 
     // * add secondary particle to the list
-    particle& add_particle(const particle::data_t& part_data)
+    particle_ptr add_particle(const particle::data_t& part_data)
     {
-      auto& new_part = m_secondaries.emplace_back(part_data, get_lab_frame(), m_projectile);
+      // create a new particle object and retrieve a pointer to it
+      particle_ptr new_particle = std::make_shared<particle>(part_data, get_lab_frame(), m_projectile);
 
-      if (m_leading_index < 0 || new_part.get_energy() > get_leading().get_energy()) {
-        m_elasticity = new_part.get_energy()/get_lab_energy();
-        m_leading_index = m_secondaries.size() - 1;
+      // add the pointer to the list of secondaries in this interaction
+      m_secondaries.emplace_back(new_particle);
+
+      // check if this particle is the leading particle and, if so, get a pointer to it
+      if (!m_leading || new_particle->get_energy() > m_leading->get_energy()) {
+        m_leading = new_particle;
       }
 
-      return new_part;
+      return new_particle;
     }
 
     // - Direct access to tree data
@@ -105,21 +107,21 @@ namespace conex::extensions {
 
     // - Additional data
 
-    const particle& get_leading() const
-    {return get_secondary(m_leading_index);}
-
-    double get_inelasticity() const
-    {return 1 - m_elasticity;}
+    const particle_ptr& get_leading() const
+    {return m_leading;}
 
     double get_elasticity() const
-    {return m_elasticity;}
+    {return get_leading()->get_energy()/get_lab_energy();}
+
+    double get_inelasticity() const
+    {return 1 - get_elasticity();}
 
     // - Access to projectile/secondary particles
 
     const projectile& get_projectile() const
     {return *m_projectile;}
 
-    const particle& get_secondary(size_t pos) const
+    const particle_ptr get_secondary(size_t pos) const
     {return m_secondaries[pos];}
 
     // - Particle iterators

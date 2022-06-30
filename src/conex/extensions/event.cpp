@@ -152,12 +152,12 @@ namespace conex::extensions {
           throw std::runtime_error("conex extensions particle/interaction counter mismatch");
         }
 
-        auto& current_particle = current_interaction->add_particle(particle_data);
+        particle_ptr current_particle = current_interaction->add_particle(particle_data);
 
         // total energy and momentum for consistency check
         if (check) {
-          esum += current_particle.get_energy();
-          psum += current_particle.get_momentum();
+          esum += current_particle->get_energy();
+          psum += current_particle->get_momentum();
         }
       }
 
