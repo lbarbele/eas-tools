@@ -95,7 +95,12 @@ int main(int argc, char** argv) {
   // * compute the interaction tree
   ce::interaction_tree_ptr tree = ce::interaction_tree::create(evt, energyThreshold);
 
+  // * the stack: a list that will hold secpar_t objects
   std::list<secpar_t> stack;
+
+  // - consistency checks
+  double totalEnergySum = 0;
+  util::vector_d totalMomentumSum(0, 0, 0, util::frame::corsika_observer);
 
   // * loop over the interaction tree to compute the CORSIKA stack
   tree->apply_recursive([&](const ce::interaction_tree& tree){
@@ -118,7 +123,7 @@ int main(int argc, char** argv) {
     const double phi_cnx = r_cnx > 1e-10? std::atan2(y_cnx, x_cnx) : 0;
 
     // rotation matrix connecting CONEX particle frame to CORSIKA particle frame
-    const auto to_corsika = (util::axis::y, util::constants::pi) * (util::axis::x, phi_cnx);
+    const auto to_corsika = (util::axis::z, -phi_cnx) * (util::axis::y, util::constants::pi);
 
     // build the corsika particle frame based on the conex particle frame
     util::frame_ptr corsika_part_frame = util::frame::create(to_corsika, proj->get_frame());
@@ -168,11 +173,11 @@ int main(int argc, char** argv) {
 
     // * loop over final products of the current interaction
     for (const ce::particle_ptr& particle : tree.get_final_products()) {
-      // ! particle ID
+      // particle ID
       secpar[0] = idToCorsika(particle->get_id());
 
       // gamma factor (or energy, if particle is massless)
-      secpar[1] = particle->get_energy() * (particle->get_mass() > 0? particle->get_mass() : 1);
+      secpar[1] = particle->get_energy() / (particle->get_mass() > 0? particle->get_mass() : 1);
 
       // particle direction in CORSIKA particle frame
       const auto direction_corsika = particle->get_momentum().on_frame(corsika_part_frame).normalize(1);
@@ -182,9 +187,39 @@ int main(int argc, char** argv) {
 
       // add to the stack
       stack.push_back(secpar);
-    }
 
+      // - consistency checks
+      totalEnergySum += particle->get_energy();
+      totalMomentumSum += particle->get_momentum();
+    }
   });
+
+  // * get shower parameters
+  const double showerEnergy = shower.get_energy_gev();
+  const double showerThetaRad = shower.get_zenith_rad();
+  const double showerPhiRad = shower.get_azimuth_rad() + util::constants::pi/2.;
+
+  // - consistency checks
+  const double edev = totalEnergySum/primaryEnergy - 1;
+
+  if (std::fabs(edev) > 1e-5) {
+    std::cerr << "bad energy sum" << std::endl;
+    return 1;
+  }
+
+  auto pprim = primaryParticle->get_momentum().norm() * util::vector_d(
+    std::sin(showerThetaRad) * std::cos(showerPhiRad),
+    std::sin(showerThetaRad) * std::sin(showerPhiRad),
+    -std::cos(showerThetaRad),
+    util::frame::corsika_observer
+  );
+
+  const double pdev = (totalMomentumSum-pprim).norm()/pprim.norm();
+
+  if (pdev > 1e-5) {
+    std::cerr << "bad momentum sum" << std::endl;
+    return 1;
+  }
 
   // * widths to print secpar fields
   std::array<size_t, 17> field_widths = {6, 13, 13, 13, 13, 13, 13, 13, 13, 3, 13, 3, 3, 3, 13, 13, 13};
@@ -192,7 +227,7 @@ int main(int argc, char** argv) {
   // * print the stackin file header
   std::cout
     << std::setw(6) << stack.size()
-    << std::setw(13) << shower.get_energy_gev()
+    << std::setw(13) << showerEnergy
     << std::setw(13) << 100 * primaryParticle->get_height()
     << std::setw(13) << shower.get_zenith_deg()
     << std::setw(13) << std::fmod(shower.get_azimuth_deg() + 90, 360)
