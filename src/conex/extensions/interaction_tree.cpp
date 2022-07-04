@@ -146,6 +146,10 @@ namespace conex::extensions {
         generation+1
       );
 
+      // add this interaction as precursor of the subtree
+      subtree->m_precursor_interaction = tree;
+
+      // add the subtree as a secondary interaction to this
       tree->m_secondary_interactions.emplace_back(subtree);
     } // loop over particles in the interaction
 

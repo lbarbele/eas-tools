@@ -21,6 +21,7 @@ namespace conex::extensions {
     interaction_ptr m_interaction;
     std::vector<particle_ptr> m_products;
     std::list<interaction_tree_ptr> m_secondary_interactions;
+    interaction_tree_ptr m_precursor_interaction;
 
     double m_energy_threshold;
     int m_generation;
