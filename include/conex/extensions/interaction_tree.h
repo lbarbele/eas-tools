@@ -58,6 +58,9 @@ namespace conex::extensions {
     int get_generation() const
     {return m_generation;}
 
+    const interaction_tree_ptr& get_precursor() const
+    {return m_precursor_interaction;}
+
     // - Methods
 
     template <class FcnT>
