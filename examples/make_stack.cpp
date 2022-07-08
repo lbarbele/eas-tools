@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
   }
 
   const cx::shower& shower = cxFile.get_shower(trueEvtIndex);
-  const ce::event& evt = cxPartFile.get_event(trueEvtIndex, thresholdRatio, false);
+  const ce::event& evt = cxPartFile.get_event(trueEvtIndex, thresholdRatio, true);
 
   // * get primary interaction data
   ce::interaction_ptr primaryInteraction = evt.get_interaction(0);
