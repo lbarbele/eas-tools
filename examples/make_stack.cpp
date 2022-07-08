@@ -51,6 +51,11 @@ int main(int argc, char** argv) {
     true, 0, "index", cmdLine
   );
 
+  TCLAP::ValueArg<unsigned int> printPrecision("p", "precision",
+    "Numeric precision used to print numbers. Value is limited to 5 <= prec <= 30.",
+    false, 12, "prec", cmdLine
+  );
+
   TCLAP::SwitchArg doConsistencyChecks("x", "no-checks",
     "Disable consistency checks when parsing the CONEX extension file.",
     cmdLine, true
@@ -61,6 +66,12 @@ int main(int argc, char** argv) {
   if (thresholdRatio < 0) {
     std::cout << "threshold ratio must be >= 0. instead it was " << thresholdRatio << std::endl;
     return 1;
+  }
+
+  if (printPrecision.getValue() > 30) {
+    printPrecision.getValue() = 30;
+  } else if (printPrecision.getValue() < 5) {
+    printPrecision.getValue() = 5;
   }
 
   // * open input files and check
@@ -226,24 +237,23 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // * widths to print secpar fields
-  std::array<size_t, 17> field_widths = {6, 13, 13, 13, 13, 13, 13, 13, 13, 3, 13, 3, 3, 3, 13, 13, 13};
+  // * width used to print secpar fields
+  unsigned int fieldWidth = printPrecision + 6;
+  std::cout.precision(printPrecision);
 
   // * print the stackin file header
   std::cout
-    << std::setw(6) << stack.size()
-    << std::setw(13) << showerEnergy
-    << std::setw(13) << 100 * primaryParticle->get_height()
-    << std::setw(13) << shower.get_zenith_deg()
-    << std::setw(13) << std::fmod(shower.get_azimuth_deg() + 90, 360)
-    << std::endl;
+    << std::setw(fieldWidth) << stack.size() << ' '
+    << std::setw(fieldWidth) << showerEnergy << ' '
+    << std::setw(fieldWidth) << 100 * primaryParticle->get_height() << ' '
+    << std::setw(fieldWidth) << shower.get_zenith_deg() << ' '
+    << std::setw(fieldWidth) << std::fmod(shower.get_azimuth_deg() + 90, 360) << '\n';
 
   // * print the stack
   for (const auto& secpar : stack) {
     for (size_t i = 0; i < secpar.size(); ++i) {
-      std::cout << std::setw(field_widths[i]) << secpar[i];
+      std::cout << std::setw(fieldWidth) << secpar[i] << (i == secpar.size()-1 ? '\n' : ' ');
     }
-    std::cout << std::endl;
   }
 
   return 0;
