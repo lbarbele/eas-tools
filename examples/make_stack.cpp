@@ -51,7 +51,10 @@ int main(int argc, char** argv) {
     true, 0, "index", cmdLine
   );
 
-  cmdLine.parse(argc, argv);
+  TCLAP::SwitchArg doConsistencyChecks("n", "no-checks",
+    "Disable consistency checks when parsing the CONEX extension file.",
+    cmdLine, true
+  );
 
   if (thresholdRatio < 0) {
     std::cout << "threshold ratio must be >= 0. instead it was " << thresholdRatio << std::endl;
@@ -83,7 +86,7 @@ int main(int argc, char** argv) {
   }
 
   const cx::shower& shower = cxFile.get_shower(trueEvtIndex);
-  const ce::event& evt = cxPartFile.get_event(trueEvtIndex, thresholdRatio, true);
+  const ce::event& evt = cxPartFile.get_event(trueEvtIndex, thresholdRatio, doConsistencyChecks);
 
   // * get primary interaction data
   ce::interaction_ptr primaryInteraction = evt.get_interaction(0);
