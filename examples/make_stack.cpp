@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     true, 0, "index", cmdLine
   );
 
-  TCLAP::SwitchArg doConsistencyChecks("n", "no-checks",
+  TCLAP::SwitchArg doConsistencyChecks("x", "no-checks",
     "Disable consistency checks when parsing the CONEX extension file.",
     cmdLine, true
   );
