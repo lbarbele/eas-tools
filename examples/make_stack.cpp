@@ -56,6 +56,8 @@ int main(int argc, char** argv) {
     cmdLine, true
   );
 
+  cmdLine.parse(argc, argv);
+
   if (thresholdRatio < 0) {
     std::cout << "threshold ratio must be >= 0. instead it was " << thresholdRatio << std::endl;
     return 1;
