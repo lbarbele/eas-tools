@@ -8,6 +8,7 @@
 
 #include <util/constants.h>
 #include <util/gaisser_hillas_fit.h>
+#include <util/vector.h>
 
 namespace conex {
 
@@ -55,6 +56,8 @@ namespace conex {
   public:
 
     TGraph graph_dedx() const;
+
+    util::vector_d get_axis() const;
 
     util::gaisser_hillas_fit get_fit() const
     {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}

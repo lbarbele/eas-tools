@@ -1,6 +1,7 @@
 #include <utility>
 
 #include <conex/shower.h>
+#include <util/frame.h>
 
 namespace conex {
 
@@ -14,6 +15,20 @@ namespace conex {
       g.SetPoint(i, x, get_dedx()[i]);
     }
     return g;
+  }
+
+  util::vector_d
+  shower::get_axis()
+  const
+  {
+    const double theta = get_zenith_rad();
+    const double phi = get_azimuth_rad();
+    return util::vector_d(
+      std::sin(theta) * std::cos(phi),
+      std::sin(theta) * std::sin(phi),
+      std::cos(theta),
+      util::frame::conex_observer
+    );
   }
 
 } // namespace conex
