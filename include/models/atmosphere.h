@@ -3,6 +3,9 @@
 
 #include <cmath>
 
+#include <util/vector.h>
+#include <util/constants.h>
+
 namespace models::atmosphere {
 
   class us_standard {
@@ -76,6 +79,43 @@ namespace models::atmosphere {
       } else {
         return 0;
       }
+    }
+
+    // * air density at position specified by vector
+    double
+    get_density(
+      const util::vector_d& position
+    ) const
+    {
+      const auto r = position + util::vector_d(0, 0, util::constants::earth_radius, util::frame::standard);
+      const double height = r.norm() - util::constants::earth_radius;
+      return get_density_from_height(height);
+    }
+
+    // * compute slant depth between two points
+    // * the origin is assumed to be at earth's surface
+    double
+    get_slant_depth(
+      const util::vector_d& r_start,
+      const util::vector_d& r_end,
+      const double step_size = 10 // 10 m, by default
+    ) const
+    {
+      const auto separation = r_end - r_start;
+      const unsigned int n_steps = 1 + separation.norm()/step_size;
+      const auto step = separation / n_steps;
+
+      auto position = r_start;
+      double slant_depth = 0;
+      for (unsigned i = 1; i < n_steps; ++i) {
+        position += step;
+        slant_depth += get_density(position);
+      }
+
+      slant_depth += 0.5*(get_density(r_start) + get_density(r_end));
+      slant_depth *= step.norm();
+
+      return slant_depth;
     }
 
   };
