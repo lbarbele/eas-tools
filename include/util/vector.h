@@ -1,5 +1,5 @@
-#ifndef _utl_vector_h
-#define _utl_vector_h
+#ifndef _util_vector_h
+#define _util_vector_h
 
 #include <array>
 #include <ostream>
