@@ -2,120 +2,155 @@
 #define _models_atmosphere_h
 
 #include <cmath>
+#include <vector>
+#include <stdexcept>
 
 #include <util/vector.h>
 #include <util/constants.h>
+
+#include <units/units.h>
 
 namespace models::atmosphere {
 
   class us_standard {
   public:
-  
-    // * vertical mass overburden in g/cm^2 as a function of height in m
-    double
-    get_vertical_depth(
-      const double height /* in m */
-    ) const
+    int m_nlayers;
+    std::vector<units::depth_t> m_a;
+    std::vector<units::depth_t> m_b;
+    std::vector<units::height_t> m_c;
+    std::vector<units::height_t> m_height_boundaries;
+    std::vector<units::depth_t> m_depth_boundaries;
+
+  public:
+
+    us_standard()
     {
-      if (height < 0) {
-        return get_vertical_depth(0);
-      } else if (height < 4e3) {
-        return -186.5562 + 1222.6562 * std::exp(-height / 9941.8638);
-      } else if (height < 1e4) {
-        return -94.919 + 1144.9069 * std::exp(-height / 8781.5355);
-      } else if (height < 4e4) {
-        return 0.61289 + 1305.5948 * std::exp(-height / 6361.4304);
-      } else if (height < 1e5) {
-        return 0 + 540.1778 * std::exp(-height / 7721.7016);
-      } else if (height < 1.128292e5) {
-        return 0.01128292 - height / 1e7;
-      } else {
-        return 0;
+      using namespace units::literals;
+
+      m_nlayers = 5;
+
+      m_a = {-186.555305_gcm, -94.919_gcm, 0.61289_gcm, 0.0_gcm, 0.01128292_gcm};
+      m_b = {1222.6562_gcm, 1144.9069_gcm, 1305.5948_gcm, 540.1778_gcm, 1_gcm};
+      m_c = {994186.38_cm, 878153.55_cm, 636143.04_cm, 772170.16_cm, 1e9_cm};
+
+      m_height_boundaries = {0_m, 4e3_m, 1e4_m, 4e4_m, 1e5_m, 1.128292e5_m};
+
+      m_depth_boundaries.resize(m_height_boundaries.size());
+      for (int i = 0; i < m_nlayers; ++i) {
+        m_depth_boundaries[i] = get_depth(m_height_boundaries[i]);
       }
     }
 
-    // * compute height im m given vertical mass overburden in g/cm^2 
-    double
-    get_height_from_depth(
-      const double depth /* in g/cm^2 */
+    // * get index of atmopsheric layer correspoding to given height
+    int
+    get_layer_index(
+      units::height_t height
     ) const
     {
-      if (depth <= 0) {
-        return 1.128292e5;
-      } else if (depth < 0.00128292) {
-        return - 1e7 * (depth - 0.01128292);
-      } else if (depth < 3.0395) {
-        return - 7721.7016 * std::log(depth / 540.1778);
-      } else if (depth < 271.7) {
-        return - 6361.4304 * std::log((depth - 0.61289) / 1305.5948);
-      } else if (depth < 631.101) {
-        return - 8781.5355 * std::log((depth + 94.919) / 1144.9069);
-      } else if (depth < 1036.1) {
-        return - 9941.8638 * std::log((depth + 186.5562) / 1222.6562);
-      } else {
-        return get_height_from_depth(1036.1-0.0000001);
+      if (height < m_height_boundaries.front()) {
+        throw std::logic_error("height below boundary");
       }
-      return 0;
+
+      if (height > m_height_boundaries.back()) {
+        throw std::logic_error("height above boundary");
+      }
+
+      for (int ilayer = 0; ilayer < m_nlayers; ++ilayer) {
+        if (height <= m_height_boundaries[ilayer+1]) {
+          return ilayer;
+        }
+      }
+
+      // if here, there is some problem in m_height_boundaries
+      throw std::logic_error("unable to find atmosphere layer from height");
     }
 
-    // * air density in g/cm^2 as a function of height in m
-    double
-    get_density_from_height(
-      const double height /* in m */
+    // * same as above, but for given height
+    int
+    get_layer_index(
+      const units::depth_t depth
     ) const
     {
-      if (height < 0) {
-        return get_density_from_height(0);
-      } else if (height < 4e3) {
-        return (1222.6562 / 9941.8638) * std::exp(-height / 9941.8638);
-      } else if (height < 1e4) {
-        return (1144.9069 / 8781.5355) * std::exp(-height / 8781.5355);
-      } else if (height < 4e4) {
-        return (1305.5948 / 6361.4304) * std::exp(-height / 6361.4304);
-      } else if (height < 1e5) {
-        return ( 540.1778 / 7721.7016) * std::exp(-height / 7721.7016);
-      } else if (height < 1.128292e5) {
-        return 1.0 / 1e9;
+      if (depth < m_depth_boundaries.back()) {
+        throw std::logic_error("depth below boundary");
+      }
+
+      if (depth > m_depth_boundaries.front()) {
+        throw std::logic_error("depth above boundary");
+      }
+
+      for (int ilayer = 0; ilayer < m_nlayers; ++ilayer) {
+        if (depth >= m_depth_boundaries[ilayer+1]) {
+          return ilayer;
+        }
+      }
+
+      using namespace units::literals;
+      // if here, there is some problem in m_height_boundaries
+      std::cout << "error:" << std::endl;
+      std::cout << depth * 1_cm * 1_cm / 1_g << std::endl;
+      throw std::logic_error("unable to find atmosphere layer from depth");
+    }
+    
+    // * vertical mass overburden as a function of height
+    units::depth_t
+    get_depth(
+      const units::height_t h
+    ) const
+    {
+      const int ilayer = get_layer_index(h);
+
+      if (ilayer < m_nlayers-1) {
+        return m_a[ilayer] + m_b[ilayer] * units::math::exp(-h/m_c[ilayer]);
       } else {
-        return 0;
+        return m_a[ilayer] - m_b[ilayer]*(h/m_c[ilayer]);
       }
     }
 
-    // * air density at position specified by vector
-    double
+    // * compute height given vertical mass overburden
+    units::height_t
+    get_height(
+      const units::depth_t depth
+    ) const
+    {
+      const int ilayer = get_layer_index(depth);
+
+      if (ilayer < m_nlayers-1) {
+        return m_c[ilayer] * units::math::log(m_b[ilayer]/(depth-m_a[ilayer]));
+      } else {
+        return m_c[ilayer] * (m_a[ilayer] - depth) / m_b[ilayer];
+      }
+    }
+
+    // * air density as a function of height
+    units::density_t
     get_density(
-      const util::vector_d& position
+      const units::height_t height
     ) const
     {
-      const auto r = position + util::vector_d(0, 0, util::constants::earth_radius, util::frame::standard);
-      const double height = r.norm() - util::constants::earth_radius;
-      return get_density_from_height(height);
-    }
+      const int ilayer = get_layer_index(height);
 
-    // * compute slant depth between two points
-    // * the origin is assumed to be at earth's surface
-    double
-    get_slant_depth(
-      const util::vector_d& r_start,
-      const util::vector_d& r_end,
-      const double step_size = 10 // 10 m, by default
-    ) const
-    {
-      const auto separation = r_end - r_start;
-      const unsigned int n_steps = 1 + separation.norm()/step_size;
-      const auto step = separation / n_steps;
-
-      auto position = r_start;
-      double slant_depth = 0;
-      for (unsigned i = 1; i < n_steps; ++i) {
-        position += step;
-        slant_depth += get_density(position);
+      units::density_t rho = m_b[ilayer]/m_c[ilayer];
+      if (ilayer < m_nlayers-1) {
+        rho *= units::math::exp(-height/m_c[ilayer]);
       }
 
-      slant_depth += 0.5*(get_density(r_start) + get_density(r_end));
-      slant_depth *= step.norm();
+      return rho;
+    }
 
-      return slant_depth;
+    // * air density as a function of depth
+    units::density_t
+    get_density(
+      const units::depth_t depth
+    ) const
+    {
+      const int ilayer = get_layer_index(depth);
+
+      if (ilayer < m_nlayers-1) {
+        return (depth - m_a[ilayer]) / m_c[ilayer];
+      } else {
+        return m_b[ilayer]/m_c[ilayer];
+      }
     }
 
   };
