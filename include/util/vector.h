@@ -13,23 +13,23 @@
 namespace util {
 
   template <class T>
-  class vector : public vector_base_t, public coordinates_t<T> {
+  class vector_t : public vector_base_t, public coordinates_t<T> {
   private:
     frame_ptr m_frame;
   
   public:
     // - Constructors
 
-    vector<T>& operator=(vector<T>&&) = default;
+    vector_t<T>& operator=(vector_t<T>&&) = default;
     
-    vector(const vector<T>&) = default;
-    vector(vector<T>&&) = default;
+    vector_t(const vector_t<T>&) = default;
+    vector_t(vector_t<T>&&) = default;
 
     // * construct the zero vector on given frame
-    vector(const frame_ptr frame = frame::standard): coordinates_t<T>(0, 0, 0), m_frame(frame) {}
+    vector_t(const frame_ptr frame = frame::standard): coordinates_t<T>(0, 0, 0), m_frame(frame) {}
 
     // * construct vector with given coordinates and frame
-    vector(const T x, const T y, const T z, const frame_ptr frame = frame::standard) : coordinates_t<T>(x, y, z), m_frame(frame) {}
+    vector_t(const T x, const T y, const T z, const frame_ptr frame = frame::standard) : coordinates_t<T>(x, y, z), m_frame(frame) {}
 
     // - Vector normalization
 
@@ -52,7 +52,7 @@ namespace util {
     {return m_frame;}
 
     // * change frame
-    vector<T>& set_frame(
+    vector_t<T>& set_frame(
       const frame_ptr& frame
     )
     {
@@ -64,11 +64,11 @@ namespace util {
     }
 
     // * create a copy of vector in a different frame
-    vector<T> on_frame(
+    vector_t<T> on_frame(
       const frame_ptr& frame
     ) const
     {
-      vector<T> other = (*this);
+      vector_t<T> other = (*this);
       other.set_frame(frame);
       return other;
     }
@@ -77,7 +77,7 @@ namespace util {
 
     // * (assignment) multiplication by scalar
     template <class U, typename = enable_if_scalar_t<U>>
-    vector<T>& operator*=(const U scalar)
+    vector_t<T>& operator*=(const U scalar)
     {
       (*this)[0] *= scalar;
       (*this)[1] *= scalar;
@@ -87,7 +87,7 @@ namespace util {
 
     // * (assignment) division by scalar
     template <class U, typename = enable_if_scalar_t<U>>
-    vector<T>& operator/=(const U scalar)
+    vector_t<T>& operator/=(const U scalar)
     {
       (*this)[0] /= scalar;
       (*this)[1] /= scalar;
@@ -97,7 +97,7 @@ namespace util {
 
     // * multiplication by scalar
     template <class U, typename = enable_if_scalar_t<U>>
-    vector<decltype(T{}*U{})> operator*(const U scalar) const
+    vector_t<decltype(T{}*U{})> operator*(const U scalar) const
     {
       return {
         (*this)[0] * scalar,
@@ -109,7 +109,7 @@ namespace util {
 
     // * division by scalar
     template <class U, typename = enable_if_scalar_t<U>>
-    vector<decltype(T{}*U{})> operator/(const U scalar) const
+    vector_t<decltype(T{}*U{})> operator/(const U scalar) const
     {
       return {
         (*this)[0] / scalar,
@@ -120,7 +120,7 @@ namespace util {
     }
 
     // * unary plus operator
-    vector<decltype(+T{})> operator+() const
+    vector_t<decltype(+T{})> operator+() const
     {
       return {
         +(*this)[0],
@@ -131,7 +131,7 @@ namespace util {
     }
 
     // * unary minus operator
-    vector<decltype(-T{})> operator-() const
+    vector_t<decltype(-T{})> operator-() const
     {
       return {
         -(*this)[0],
@@ -144,7 +144,7 @@ namespace util {
 
     // * (assignment) sum with vector
     template <class U>
-    vector<T>& operator+=(const vector<U>& v)
+    vector_t<T>& operator+=(const vector_t<U>& v)
     {
       const auto other = v.on_frame(get_frame());
       (*this)[0] += other[0];
@@ -155,7 +155,7 @@ namespace util {
 
     // * (assignment) subtraction with vector
     template <class U>
-    vector<T>& operator-=(const vector<U>& v)
+    vector_t<T>& operator-=(const vector_t<U>& v)
     {
       const auto& other = v.on_frame(get_frame());
       (*this)[0] -= other[0];
@@ -166,7 +166,7 @@ namespace util {
 
     // * vector sum
     template <class U>
-    vector<decltype(T{}+U{})> operator+(const vector<U>& v) const
+    vector_t<decltype(T{}+U{})> operator+(const vector_t<U>& v) const
     {
       const auto other = v.on_frame(get_frame());
       return {
@@ -179,7 +179,7 @@ namespace util {
 
     // * vector subtraction
     template <class U>
-    vector<decltype(T{}-U{})> operator-(const vector<U>& v) const
+    vector_t<decltype(T{}-U{})> operator-(const vector_t<U>& v) const
     {
       const auto other = v.on_frame(get_frame());
       return {
@@ -192,7 +192,7 @@ namespace util {
 
     // * dot product
     template <class U>
-    decltype(T{}*U{}) operator*(const vector<U>& v) const
+    decltype(T{}*U{}) operator*(const vector_t<U>& v) const
     {
       const auto other = v.on_frame(get_frame());
       return other[0]*(*this)[0] + other[1]*(*this)[1] + other[2]*(*this)[2];
@@ -200,8 +200,8 @@ namespace util {
 
     // * cross product
     template <class U>
-    vector<decltype(T{}*U{})> cross_product(
-      const vector<U>& v
+    vector_t<decltype(T{}*U{})> cross_product(
+      const vector_t<U>& v
     ) const
     {
       const auto other = v.on_frame(get_frame());
@@ -216,9 +216,9 @@ namespace util {
 
   // * scalar-vector product (from lhs)
   template <class T, class U, typename = enable_if_scalar_t<T>>
-  vector<decltype(T{}*U{})> operator*(
+  vector_t<decltype(T{}*U{})> operator*(
     const T scalar,
-    const vector<U>& v
+    const vector_t<U>& v
   )
   {
     // scalar-vector product is commutative
@@ -226,8 +226,8 @@ namespace util {
   }
 
   // - Aliases
-  using vector_d = vector<double>;
-  using vector_f = vector<float>;
+  using vector_d = vector_t<double>;
+  using vector_f = vector_t<float>;
 }
 
 #endif

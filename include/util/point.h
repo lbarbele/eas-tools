@@ -84,7 +84,7 @@ namespace util {
 
     // * point-point subtraction produces a vector
     template <class U>
-    vector<decltype(T{}-U{})>
+    vector_t<decltype(T{}-U{})>
     operator-(
       point_t<U> p
     ) const
@@ -97,7 +97,7 @@ namespace util {
     template <class U>
     point_t<decltype(T{}+U{})>
     operator+(
-      vector<U> v
+      vector_t<U> v
     ) const
     {
       v.set_frame(get_frame());
@@ -107,7 +107,7 @@ namespace util {
     template <class U>
     point_t<T>&
     operator+=(
-      vector<U> v
+      vector_t<U> v
     )
     {
       v.set_frame(get_frame());
@@ -120,7 +120,7 @@ namespace util {
     template <class U>
     point_t<decltype(T{}-U{})>
     operator-(
-      vector<U> v
+      vector_t<U> v
     ) const
     {
       v.set_frame(get_frame());
@@ -130,7 +130,7 @@ namespace util {
     template <class U>
     point_t<T>&
     operator-=(
-      vector<U> v
+      vector_t<U> v
     )
     {
       v.set_frame(get_frame());

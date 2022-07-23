@@ -21,7 +21,7 @@ namespace units {
   using time_t = time::second_t;
 
   // * vector quantities
-  using position_t = util::vector<length::meter_t>;
+  using position_t = util::vector_t<length::meter_t>;
 }
 
 using namespace units::literals;
