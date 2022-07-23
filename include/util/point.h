@@ -56,7 +56,6 @@ namespace util {
       const frame_ptr& frame
     )
     {
-      m_frame * (*this);
       if (frame != get_frame()) {
         // rotate to the standard frame
         *this = get_frame()->from() * (*this);
