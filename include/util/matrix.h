@@ -13,10 +13,8 @@
 
 namespace util {
 
-  class matrix_base {};
-
   template <class T, size_t M, size_t N>
-  class matrix : public matrix_base {
+  class matrix : public matrix_base_t {
 
   protected:
     std::array<T, M*N> m_data;

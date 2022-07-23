@@ -10,8 +10,6 @@
 
 namespace util {
 
-  class point_base_t {};
-
   template <class T>
   class point_t : public point_base_t, public coordinates_t<T> {
   private:
