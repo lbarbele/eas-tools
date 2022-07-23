@@ -19,8 +19,8 @@ namespace util {
 
     // - Constructors
     
-    coordinates_t() {};
-    coordinates_t(const T& x, const T& y, const T& z) : m_data{x, y, z} {}
+    constexpr coordinates_t() {};
+    constexpr coordinates_t(const T& x, const T& y, const T& z) : m_data{x, y, z} {}
 
     // - Destructor
 
