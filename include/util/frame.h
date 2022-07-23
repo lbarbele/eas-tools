@@ -5,9 +5,10 @@
 #include <memory>
 #include <type_traits>
 
+#include <util/constants.h>
+#include <util/coordinates.h>
 #include <util/matrix.h>
 #include <util/rotation_matrix.h>
-#include <util/constants.h>
 
 namespace util {
 
@@ -21,7 +22,7 @@ namespace util {
     square_matrix_d<3> m_to{0};
 
     // * coordinates of origin wrt standard frame
-    struct {double x, y, z;} m_origin{0, 0, 0};
+    coordinates_t<double> m_origin{0, 0, 0};
 
     constexpr frame() {}
     constexpr frame(const frame& other) {}
@@ -39,6 +40,7 @@ namespace util {
     }
 
     // * create frame from a transformation matrix ("to" matrix) and a starting frame
+    // * origin of frames coincide
     static frame_ptr create(
       const square_matrix_d<3>& rot_to,
       const frame_ptr& base_frame
@@ -48,6 +50,25 @@ namespace util {
       f->m_to = rot_to*base_frame->to();
       f->m_from = f->m_to.transpose();
       f->m_origin = base_frame->m_origin;
+      return f;
+    }
+
+    // * create frame from rotation and displacement
+    static frame_ptr create(
+      const square_matrix_d<3>& rot_to,
+      const coordinates_t<double>& new_origin,
+      const frame_ptr& base_frame
+    )
+    {
+      // create a rotated frame with same origin as the base frame
+      frame_ptr f = create(rot_to, base_frame);
+
+      // set origin as base_frame origin + new_origin
+      const auto new_origin_std = base_frame->from() * new_origin;
+      f->m_origin.x() += new_origin.x();
+      f->m_origin.y() += new_origin.y();
+      f->m_origin.z() += new_origin.z();
+
       return f;
     }
 
@@ -61,7 +82,7 @@ namespace util {
     {return m_from;}
 
     // * access coordinates of origin
-    constexpr const decltype(m_origin)& origin() const
+    constexpr const coordinates_t<double>& origin() const
     {return m_origin;}
 
     // - Default frames
