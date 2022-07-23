@@ -100,11 +100,11 @@ namespace util {
     const CoordinatesT<U>& c
   )
   {
-    return {
-      mtx(0, 0)*c.x() + mtx(0, 1)*c.y() + mtx(0, 2)*c.z(),
-      mtx(1, 0)*c.x() + mtx(1, 1)*c.y() + mtx(1, 2)*c.z(),
-      mtx(2, 0)*c.x() + mtx(2, 1)*c.y() + mtx(2, 2)*c.z()
-    };
+    CoordinatesT<U> other = c;
+    other.x() = mtx(0, 0)*c.x() + mtx(0, 1)*c.y() + mtx(0, 2)*c.z();
+    other.y() = mtx(1, 0)*c.x() + mtx(1, 1)*c.y() + mtx(1, 2)*c.z();
+    other.z() = mtx(2, 0)*c.x() + mtx(2, 1)*c.y() + mtx(2, 2)*c.z();
+    return other;
   }
 
   // * print coordinates to stream
