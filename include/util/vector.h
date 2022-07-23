@@ -49,15 +49,22 @@ namespace util {
     // - Vector normalization
 
     // * compute vector norm 
-    auto norm() const
-    {return std::hypot((*this)[0], (*this)[1], (*this)[2]);}
+    T norm() const
+    {return this->get_r();}
 
     // * normalize vector to given value and return it
-    template <class U>
-    auto& normalize(const U w = 1)
+    vector_t<T>& normalize(const T w)
     {
       (*this) *= w/norm();
       return (*this);
+    }
+
+    // * get copy of vector normalized to given value
+    vector_t<T> get_normalized(const T w)
+    {
+      auto other = *this;
+      other.normalize(w);
+      return other;
     }
 
     // - Frame manipulation
