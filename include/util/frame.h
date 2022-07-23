@@ -51,16 +51,6 @@ namespace util {
       return f;
     }
 
-    // * create frame from a single rotation around specified axis and a starting frame
-    static frame_ptr create(
-      const axis ax,
-      const double angle,
-      const frame_ptr& base_frame
-    )
-    {
-      return create( (ax, angle), base_frame );
-    }
-
     // - Methods
 
     // * access rotation matrices
