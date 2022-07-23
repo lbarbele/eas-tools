@@ -49,7 +49,30 @@ namespace util {
       frame_ptr f(new frame());
       f->m_to = rot_to*base_frame->to();
       f->m_from = f->m_to.transpose();
-      f->m_origin = base_frame->m_origin;
+      f->m_origin = base_frame->origin();
+      return f;
+    }
+
+    // * create frame from displacement only
+    // * orientations coincide
+    static frame_ptr create(
+      const coordinates_t<double>& new_origin,
+      const frame_ptr& base_frame
+    )
+    {
+      // create empty frame
+      frame_ptr f = create();
+
+      // copy rotation matrices from the base frame
+      f->m_from = base_frame->from();
+      f->m_to = base_frame->to();
+
+      // set origin as base_frame origin + new_origin
+      const auto new_origin_std = base_frame->from() * new_origin;
+      f->m_origin.x() = base_frame->origin().x() + new_origin_std.x();
+      f->m_origin.y() = base_frame->origin().y() + new_origin_std.y();
+      f->m_origin.z() = base_frame->origin().z() + new_origin_std.z();
+
       return f;
     }
 
@@ -65,9 +88,9 @@ namespace util {
 
       // set origin as base_frame origin + new_origin
       const auto new_origin_std = base_frame->from() * new_origin;
-      f->m_origin.x() += new_origin.x();
-      f->m_origin.y() += new_origin.y();
-      f->m_origin.z() += new_origin.z();
+      f->m_origin.x() += new_origin_std.x();
+      f->m_origin.y() += new_origin_std.y();
+      f->m_origin.z() += new_origin_std.z();
 
       return f;
     }
