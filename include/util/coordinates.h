@@ -28,18 +28,18 @@ namespace util {
 
     // - Spherical coordinates
 
-    T get_r() const
+    constexpr T get_r() const
     {
       return std::hypot(x(), y(), z());
     }
 
-    T get_theta() const
+    constexpr T get_theta() const
     {
       const T r = get_r();
       return r > 1e-20? std::acos(z()/get_r()) : 0;
     }
 
-    T get_phi() const
+    constexpr T get_phi() const
     {
       const T r_sin_theta = std::hypot(x(), y());
       return r_sin_theta > 1e-20? std::atan2(y(), x()) : 0;
@@ -48,51 +48,52 @@ namespace util {
     // - Element access
 
     // * direct access to x, y, and z coordinates
-    T& x() {return m_data[0];}
-    T& y() {return m_data[1];}
-    T& z() {return m_data[2];}
+    constexpr T& x() {return m_data[0];}
+    constexpr T& y() {return m_data[1];}
+    constexpr T& z() {return m_data[2];}
 
-    const T& x() const {return m_data[0];}
-    const T& y() const {return m_data[1];}
-    const T& z() const {return m_data[2];}
+    constexpr const T& x() const {return m_data[0];}
+    constexpr const T& y() const {return m_data[1];}
+    constexpr const T& z() const {return m_data[2];}
 
     // * access with bounds checking
-    T& at(const size_t i)
+    constexpr T& at(const size_t i)
     {return m_data.at(i);}
 
-    const T& at(const size_t i) const
+    constexpr const T& at(const size_t i) const
     {return m_data.at(i);}
 
     // * no bounds checking
-    T& operator[](const size_t i)
+    constexpr T& operator[](const size_t i)
     {return m_data[i];}
 
-    const T& operator[](const size_t i) const
+    constexpr const T& operator[](const size_t i) const
     {return m_data[i];}
 
     // * standard iterators
-    auto begin() {return m_data.begin();}
-    auto end() {return m_data.end();}
+    constexpr auto begin() {return m_data.begin();}
+    constexpr auto end() {return m_data.end();}
     
     // * const iterators
-    auto begin() const {return m_data.begin();}
-    auto cbegin() const {return m_data.cbegin();}
-    auto end() const {return m_data.end();}
-    auto cend() const {return m_data.cend();}
+    constexpr auto begin() const {return m_data.begin();}
+    constexpr auto cbegin() const {return m_data.cbegin();}
+    constexpr auto end() const {return m_data.end();}
+    constexpr auto cend() const {return m_data.cend();}
 
     // * reverse iterators
-    auto rbegin() {return m_data.rbegin();}
-    auto rend() {return m_data.rend();}
+    constexpr auto rbegin() {return m_data.rbegin();}
+    constexpr auto rend() {return m_data.rend();}
 
     // * const reverse iterators
-    auto rbegin() const {return m_data.rbegin();}
-    auto crbegin() const {return m_data.crbegin();}
-    auto rend() const {return m_data.rend();}
-    auto crend() const {return m_data.crend();}
+    constexpr auto rbegin() const {return m_data.rbegin();}
+    constexpr auto crbegin() const {return m_data.crbegin();}
+    constexpr auto rend() const {return m_data.rend();}
+    constexpr auto crend() const {return m_data.crend();}
   };
 
   // * coordinates transformation for any (template) type derived from coordinates_t
   template <class T, class U, template<class> class CoordinatesT, typename = enable_if_coordinates_t<CoordinatesT<U>>>
+  constexpr
   CoordinatesT<decltype(T{}*U{})>
   operator*(
     const square_matrix<T, 3>& mtx,
