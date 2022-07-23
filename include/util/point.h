@@ -74,7 +74,7 @@ namespace util {
     // * create a copy of this point in a different frame
     point_t<T> on_frame(
       const frame_ptr& frame
-    )
+    ) const
     {
       point_t other = (*this);
       other.set_frame(frame);
