@@ -1,6 +1,7 @@
 #ifndef _util_frame_h
 #define _util_frame_h
 
+#include <array>
 #include <memory>
 #include <type_traits>
 
@@ -15,10 +16,14 @@ namespace util {
 
   class frame {
   private:
-    square_matrix_d<3> m_from;
-    square_matrix_d<3> m_to;
+    // * rotation matrices with respect to the standard frame
+    square_matrix_d<3> m_from{0};
+    square_matrix_d<3> m_to{0};
 
-    constexpr frame() : m_from(0), m_to(0) {}
+    // * coordinates of origin wrt standard frame
+    struct {double x, y, z;} m_origin{0, 0, 0};
+
+    constexpr frame() {}
     constexpr frame(const frame& other) {}
     constexpr frame(frame&& other) {}
 
@@ -42,6 +47,7 @@ namespace util {
       frame_ptr f(new frame());
       f->m_to = rot_to*base_frame->to();
       f->m_from = f->m_to.transpose();
+      f->m_origin = base_frame->m_origin;
       return f;
     }
 
@@ -63,6 +69,10 @@ namespace util {
 
     constexpr const square_matrix_d<3>& from() const
     {return m_from;}
+
+    // * access coordinates of origin
+    constexpr const decltype(m_origin)& origin() const
+    {return m_origin;}
 
     // - Default frames
     const inline static frame_ptr standard = create();
