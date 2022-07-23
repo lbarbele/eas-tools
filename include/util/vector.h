@@ -6,63 +6,30 @@
 #include <iomanip>
 #include <cmath>
 
+#include <util/coordinates.h>
 #include <util/type_traits.h>
 #include <util/frame.h>
 
 namespace util {
 
-  class vector_base {};
-
   template <class T>
-  class vector : vector_base {
+  class vector : public vector_base_t, public coordinates_t<T> {
   private:
-    std::array<T, 3> m_data;
     frame_ptr m_frame;
   
   public:
     // - Constructors
 
+    vector<T>& operator=(vector<T>&&) = default;
+    
+    vector(const vector<T>&) = default;
+    vector(vector<T>&&) = default;
+
     // * construct the zero vector on given frame
-    vector(const frame_ptr frame = frame::standard): m_data{0, 0, 0}, m_frame(frame) {}
+    vector(const frame_ptr frame = frame::standard): coordinates_t<T>(0, 0, 0), m_frame(frame) {}
 
     // * construct vector with given coordinates and frame
-    vector(const T x, const T y, const T z, const frame_ptr frame = frame::standard) : m_data{x, y, z}, m_frame(frame) {}
-
-    // - Element access
-
-    // * access with bounds checking
-    T& at(const size_t i)
-    {return m_data.at(i);}
-
-    const T& at(const size_t i) const
-    {return m_data.at(i);}
-
-    // * no bounds checking
-    T& operator[](const size_t i)
-    {return m_data[i];}
-
-    const T& operator[](const size_t i) const
-    {return m_data[i];}
-
-    // * standard iterators
-    auto begin() {return m_data.begin();}
-    auto end() {return m_data.end();}
-    
-    // * const iterators
-    auto begin() const {return m_data.begin();}
-    auto cbegin() const {return m_data.cbegin();}
-    auto end() const {return m_data.end();}
-    auto cend() const {return m_data.cend();}
-
-    // * reverse iterators
-    auto rbegin() {return m_data.rbegin();}
-    auto rend() {return m_data.rend();}
-
-    // * const reverse iterators
-    auto rbegin() const {return m_data.rbegin();}
-    auto crbegin() const {return m_data.crbegin();}
-    auto rend() const {return m_data.rend();}
-    auto crend() const {return m_data.crend();}
+    vector(const T x, const T y, const T z, const frame_ptr frame = frame::standard) : coordinates_t<T>(x, y, z), m_frame(frame) {}
 
     // - Vector normalization
 
@@ -256,35 +223,6 @@ namespace util {
   {
     // scalar-vector product is commutative
     return v*scalar;
-  }
-
-  // * matrix-vector product (from lhs)
-  template <class T, class U, class R = decltype(T{} * U{})>
-  vector<R> operator*(
-    const square_matrix<T, 3>& mtx,
-    const vector<U>& v
-  )
-  {
-    return {
-      mtx(0, 0)*v[0] + mtx(0, 1)*v[1] + mtx(0, 2)*v[2],
-      mtx(1, 0)*v[0] + mtx(1, 1)*v[1] + mtx(1, 2)*v[2],
-      mtx(2, 0)*v[0] + mtx(2, 1)*v[1] + mtx(2, 2)*v[2]
-    };
-  }
-
-  // * print vector to output stream
-  template<class T, class CharT, class Traits = std::char_traits<CharT> >
-  std::basic_ostream<CharT, Traits>&
-  operator<<(
-    std::basic_ostream<CharT, Traits>& stream,
-    const vector<T>& v
-  )
-  {
-    auto w = stream.width() > 0? stream.width() : 15;
-    for (auto & elem : v) {
-      stream << std::setw(w) << elem;
-    }
-    return stream;
   }
 
   // - Aliases

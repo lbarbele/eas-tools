@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 
+#include <util/coordinates.h>
 #include <util/frame.h>
 #include <util/vector.h>
 
@@ -12,61 +13,24 @@ namespace util {
   class point_base_t {};
 
   template <class T>
-  class point_t : public point_base_t {
+  class point_t : public point_base_t, public coordinates_t<T> {
   private:
-    std::array<T, 3> m_data;
     frame_ptr m_frame;
 
   public:
 
     // - Constructors
 
-    // * construct a point with 0 coordinates on given frame  
-    point_t(const frame_ptr frame = frame::standard): m_data{0, 0, 0}, m_frame(frame) {}
-
-    // * constructe a point with given coordinates and frame
-    point_t(const T x, const T y, const T z, const frame_ptr frame = frame::standard) : m_data{x, y, z}, m_frame(frame) {}
-
-    // - Element access
-
-    // * access with bounds checking
-    T& at(const size_t i)
-    {return m_data.at(i);}
-
-    const T& at(const size_t i) const
-    {return m_data.at(i);}
-
-    // * no bounds checking
-    T& operator[](const size_t i)
-    {return m_data[i];}
-
-    const T& operator[](const size_t i) const
-    {return m_data[i];}
-
-    // * standard iterators
-    auto begin() {return m_data.begin();}
-    auto end() {return m_data.end();}
-    
-    // * const iterators
-    auto begin() const {return m_data.begin();}
-    auto cbegin() const {return m_data.cbegin();}
-    auto end() const {return m_data.end();}
-    auto cend() const {return m_data.cend();}
-
-    // * reverse iterators
-    auto rbegin() {return m_data.rbegin();}
-    auto rend() {return m_data.rend();}
-
-    // * const reverse iterators
-    auto rbegin() const {return m_data.rbegin();}
-    auto crbegin() const {return m_data.crbegin();}
-    auto rend() const {return m_data.rend();}
-    auto crend() const {return m_data.crend();}
-
-    // * direct access to x, y, and z coordinates
-    T& x = m_data[0];
-    T& y = m_data[1];
-    T& z = m_data[2];
+    // * construct a point with given coordinates and frame
+    point_t(
+      const T& x,
+      const T& y,
+      const T& z,
+      const frame_ptr frame = frame::standard
+    ) :
+      coordinates_t<T>{x, y, z},
+      m_frame(frame)
+    {}
 
     // - Frame manipulation
 
@@ -79,13 +43,14 @@ namespace util {
       const frame_ptr& frame
     )
     {
+      m_frame * (*this);
       if (frame != get_frame()) {
         // rotate to the standard frame
         *this = get_frame()->from() * (*this);
         // move origin to the new frame
-        x += get_frame()->origin().x - frame->origin().x;
-        y += get_frame()->origin().y - frame->origin().y;
-        z += get_frame()->origin().z - frame->origin().z;
+        this->x() += get_frame()->origin()[0] - frame->origin()[0];
+        this->y() += get_frame()->origin()[1] - frame->origin()[1];
+        this->z() += get_frame()->origin()[2] - frame->origin()[2];
         // rotate to the new frame
         *this = frame->to() * (*this);
         // set the frame
@@ -108,13 +73,13 @@ namespace util {
 
     // * distance to origin and distance to point
     T distance() const
-    {return std::hypot(x, y, z);}
+    {return this->get_r();}
 
     template <class U>
     decltype(T{} - U{}) distance(point_t<U> p) const
     {
       p.on_frame(get_frame());
-      return std::hypot(x-p.x, y-p.y, z-p.z);
+      return std::hypot(this->x()-p.x(), this->y()-p.y(), this->z()-p.z());
     }
 
     // * point-point subtraction produces a vector
@@ -125,7 +90,7 @@ namespace util {
     ) const
     {
       p.set_frame(get_frame());
-      return {x - p.x, y - p.y, z - p.z, get_frame()};
+      return {this->x() - p.x(), this->y() - p.y(), this->z() - p.z(), get_frame()};
     }
 
     // * point-vector sum/subtraction produces a point
@@ -136,7 +101,7 @@ namespace util {
     ) const
     {
       v.set_frame(get_frame());
-      return {x + v[0], y + v[1], z + v[2], get_frame()};
+      return {this->x() + v[0], this->y() + v[1], this->z() + v[2], get_frame()};
     }
 
     template <class U>
@@ -146,9 +111,9 @@ namespace util {
     )
     {
       v.set_frame(get_frame());
-      x += v[0];
-      y += v[1];
-      z += v[2];
+      this->x() += v[0];
+      this->y() += v[1];
+      this->z() += v[2];
       return *this;
     }
 
@@ -159,7 +124,7 @@ namespace util {
     ) const
     {
       v.set_frame(get_frame());
-      return {x - v[0], y - v[1], z - v[2], get_frame()};
+      return {this->x() - v[0], this->y() - v[1], this->z() - v[2], get_frame()};
     }
 
     template <class U>
@@ -169,42 +134,13 @@ namespace util {
     )
     {
       v.set_frame(get_frame());
-      x -= v[0];
-      y -= v[1];
-      z -= v[2];
+      this->x() -= v[0];
+      this->y() -= v[1];
+      this->z() -= v[2];
       return *this;
     }
 
   };
-
-  // * product with a matrix (transformations) from lhs
-  template <class T, class U, class R = decltype(T{} * U{})>
-  point_t<R> operator*(
-    const square_matrix<T, 3>& mtx,
-    const point_t<U>& p
-  )
-  {
-    return {
-      mtx(0, 0)*p.x + mtx(0, 1)*p.y + mtx(0, 2)*p.z,
-      mtx(1, 0)*p.x + mtx(1, 1)*p.y + mtx(1, 2)*p.z,
-      mtx(2, 0)*p.x + mtx(2, 1)*p.y + mtx(2, 2)*p.z
-    };
-  }
-
-  // * print point to output stream
-  template<class T, class CharT, class Traits = std::char_traits<CharT> >
-  std::basic_ostream<CharT, Traits>&
-  operator<<(
-    std::basic_ostream<CharT, Traits>& stream,
-    const point_t<T>& p
-  )
-  {
-    auto w = stream.width() > 0? stream.width() : 15;
-    for (const auto& coord : p) {
-      stream << std::setw(w) << coord;
-    }
-    return stream;
-  }
 
   // - Aliases
   using point_d = point_t<double>;
