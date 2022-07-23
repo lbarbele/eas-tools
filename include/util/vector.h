@@ -20,16 +20,31 @@ namespace util {
   public:
     // - Constructors
 
-    vector_t<T>& operator=(vector_t<T>&&) = default;
-    
-    vector_t(const vector_t<T>&) = default;
-    vector_t(vector_t<T>&&) = default;
+    // * undefined coordinates on given frame (defaults to standard frame)
+    vector_t(
+      const frame_ptr frame = frame::standard
+    ) :
+      m_frame(frame)
+    {}
 
-    // * construct the zero vector on given frame
-    vector_t(const frame_ptr frame = frame::standard): coordinates_t<T>(0, 0, 0), m_frame(frame) {}
+    // * construct a vector from a coordinates object and frame (explicit)
+    vector_t(
+      const coordinates_t<T>& coordinates,
+      const frame_ptr frame
+    ) :
+      coordinates_t<T>(coordinates),
+      m_frame(frame)
+    {}
 
-    // * construct vector with given coordinates and frame
-    vector_t(const T x, const T y, const T z, const frame_ptr frame = frame::standard) : coordinates_t<T>(x, y, z), m_frame(frame) {}
+    // * construct a point with explicit coordinates and frame (defaults to standard frame)
+    vector_t(
+      const T& x,
+      const T& y,
+      const T& z,
+      const frame_ptr frame = frame::standard
+    ) :
+      vector_t({x, y, z}, frame)
+    {}
 
     // - Vector normalization
 

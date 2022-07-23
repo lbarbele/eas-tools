@@ -19,6 +19,22 @@ namespace util {
 
     // - Constructors
 
+    // * undefined coordinates on given frame (defaults to standard frame)
+    point_t(
+      const frame_ptr frame = frame::standard
+    ) :
+      m_frame(frame)
+    {}
+
+    // * construct a point from a coordinates object and frame (explicit)
+    point_t(
+      const coordinates_t<T>& coordinates,
+      const frame_ptr frame
+    ) :
+      coordinates_t<T>(coordinates),
+      m_frame(frame)
+    {}
+
     // * construct a point with given coordinates and frame
     point_t(
       const T& x,
@@ -26,8 +42,7 @@ namespace util {
       const T& z,
       const frame_ptr frame = frame::standard
     ) :
-      coordinates_t<T>{x, y, z},
-      m_frame(frame)
+      point_t({x, y, z}, frame)
     {}
 
     // - Frame manipulation
@@ -69,10 +84,7 @@ namespace util {
 
     // - Operations
 
-    // * distance to origin and distance to point
-    T distance() const
-    {return this->get_r();}
-
+    // * distance to another point
     template <class U>
     decltype(T{} - U{}) distance(point_t<U> p) const
     {
