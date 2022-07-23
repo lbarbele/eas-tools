@@ -18,61 +18,76 @@ namespace util {
   class frame {
   private:
     // * rotation matrices with respect to the standard frame
-    square_matrix_d<3> m_from{0};
-    square_matrix_d<3> m_to{0};
+    square_matrix_d<3> m_from{1, 0, 0, 0, 1, 0, 0, 0, 1};
+    square_matrix_d<3> m_to{1, 0, 0, 0, 1, 0, 0, 0, 1};
 
     // * coordinates of origin wrt standard frame
     coordinates_t<double> m_origin{0, 0, 0};
 
     constexpr frame() {}
-    constexpr frame(const frame& other) {}
-    constexpr frame(frame&& other) {}
+    constexpr frame(const frame& other) = delete;
+    constexpr frame(frame&& other) = delete;
 
-  public:
-
-    // * create the default frame
-    static frame_ptr create()
-    {
-      frame_ptr f(new frame());
-      f->m_from(0, 0) = f->m_from(1, 1) = f->m_from(2, 2) = 1;
-      f->m_to(0, 0) = f->m_to(1, 1) = f->m_to(2, 2) = 1;
-      return f;
-    }
-
-    // * create frame from a transformation matrix ("to" matrix) and a starting frame
-    // * origin of frames coincide
-    static frame_ptr create(
+    void set_rotation_matrix(
       const square_matrix_d<3>& rot_to,
       const frame_ptr& base_frame
     )
     {
-      frame_ptr f(new frame());
-      f->m_to = rot_to*base_frame->to();
-      f->m_from = f->m_to.transpose();
-      f->m_origin = base_frame->origin();
-      return f;
+      m_to = rot_to*base_frame->to();
+      m_from = m_to.transpose();
     }
 
-    // * create frame from displacement only
-    // * orientations coincide
+    void set_origin_coordinates(
+      const coordinates_t<double>& new_origin,
+      const frame_ptr& base_frame
+    )
+    {
+      m_origin = base_frame->from() * new_origin;
+      m_origin.x() += base_frame->origin().x();
+      m_origin.y() += base_frame->origin().y();
+      m_origin.z() += base_frame->origin().z();
+    }
+
+  public:
+
+    // - Static creation methods
+
+    // * create the default frame
+    static frame_ptr create()
+    {
+      return frame_ptr(new frame);
+    }
+
+    // * create copy of frame
+    static frame_ptr create(
+      const frame_ptr& base_frame
+    )
+    {
+      return base_frame;
+    }
+
+    // * create displaced frame, with same orientation
     static frame_ptr create(
       const coordinates_t<double>& new_origin,
       const frame_ptr& base_frame
     )
     {
-      // create empty frame
       frame_ptr f = create();
-
-      // copy rotation matrices from the base frame
       f->m_from = base_frame->from();
       f->m_to = base_frame->to();
+      f->set_origin_coordinates(new_origin, base_frame);
+      return f;
+    }
 
-      // set origin as base_frame origin + new_origin
-      const auto new_origin_std = base_frame->from() * new_origin;
-      f->m_origin.x() = base_frame->origin().x() + new_origin_std.x();
-      f->m_origin.y() = base_frame->origin().y() + new_origin_std.y();
-      f->m_origin.z() = base_frame->origin().z() + new_origin_std.z();
-
+    // * create rotated frame, with same origin
+    static frame_ptr create(
+      const square_matrix_d<3>& rot_to,
+      const frame_ptr& base_frame
+    )
+    {
+      frame_ptr f = create();
+      f->set_rotation_matrix(rot_to, base_frame);
+      f->m_origin = base_frame->origin();
       return f;
     }
 
@@ -83,16 +98,19 @@ namespace util {
       const frame_ptr& base_frame
     )
     {
-      // create a rotated frame with same origin as the base frame
-      frame_ptr f = create(rot_to, base_frame);
-
-      // set origin as base_frame origin + new_origin
-      const auto new_origin_std = base_frame->from() * new_origin;
-      f->m_origin.x() += new_origin_std.x();
-      f->m_origin.y() += new_origin_std.y();
-      f->m_origin.z() += new_origin_std.z();
-
+      frame_ptr f = create();
+      f->set_rotation_matrix(rot_to, base_frame);
+      f->set_origin_coordinates(new_origin, base_frame);
       return f;
+    }
+
+    static frame_ptr create(
+      const coordinates_t<double>& new_origin,
+      const square_matrix_d<3>& rot_to,
+      const frame_ptr& base_frame
+    )
+    {
+      return create(rot_to, new_origin, base_frame);
     }
 
     // - Methods
@@ -109,6 +127,7 @@ namespace util {
     {return m_origin;}
 
     // - Default frames
+    
     const inline static frame_ptr standard = create();
     const inline static frame_ptr corsika_observer = standard;
     const inline static frame_ptr conex_observer = create((axis::z, -constants::pi/2.0), standard);
