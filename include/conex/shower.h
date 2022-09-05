@@ -157,7 +157,7 @@ namespace conex {
     const float* get_heights() const
     {return H;}
 
-    const float* ged_distances() const
+    const float* get_distances() const
     {return D;}
 
     const float* get_dedx() const
