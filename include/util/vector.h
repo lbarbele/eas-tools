@@ -60,7 +60,7 @@ namespace util {
     }
 
     // * get copy of vector normalized to given value
-    vector_t<T> get_normalized(const T w)
+    vector_t<T> get_normalized(const T w) const
     {
       auto other = *this;
       other.normalize(w);
@@ -162,6 +162,7 @@ namespace util {
         get_frame()
       };
     }
+
     // - Frame-dependent operations
 
     // * (assignment) sum with vector
@@ -233,7 +234,6 @@ namespace util {
         (*this)[0]*other[1] - (*this)[1]*other[0]
       };
     }
-
   };
 
   // * scalar-vector product (from lhs)
@@ -246,6 +246,11 @@ namespace util {
     // scalar-vector product is commutative
     return v*scalar;
   }
+
+  // * compute angle between two vectors (static)
+  template <class A, class B>
+  auto angle(const vector_t<A>& a, const vector_t<B>& b)
+  {return std::acos(a.get_normalized(1) * b.get_normalized(1));}
 
   // - Aliases
   using vector_d = vector_t<double>;
