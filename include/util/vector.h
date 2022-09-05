@@ -247,10 +247,14 @@ namespace util {
     return v*scalar;
   }
 
-  // * compute angle between two vectors (static)
+  // * compute angle or cos(angle) between two vectors
+  template <class A, class B>
+  auto cos_angle(const vector_t<A>& a, const vector_t<B>& b)
+  {return a.get_normalized(1) * b.get_normalized(1);}
+
   template <class A, class B>
   auto angle(const vector_t<A>& a, const vector_t<B>& b)
-  {return std::acos(a.get_normalized(1) * b.get_normalized(1));}
+  {return std::acos(cos_angle(a, b));}
 
   // - Aliases
   using vector_d = vector_t<double>;
