@@ -8,6 +8,7 @@
 #include <util/constants.h>
 #include <util/vector.h>
 #include <util/frame.h>
+#include <util/point.h>
 
 namespace conex::extensions {
 
@@ -74,7 +75,7 @@ namespace conex::extensions {
     const util::frame_ptr& get_frame() const
     {return m_frame;}
 
-    util::vector_d get_formation_point() const
+    util::point_d get_formation_point() const
     {return get_precursor()->get_position();}
 
     double get_formation_time_s() const

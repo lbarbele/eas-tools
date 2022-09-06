@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include <util/frame.h>
+#include <util/point.h>
 #include <util/vector.h>
 #include <util/constants.h>
 #include <util/rotation_matrix.h>
@@ -47,7 +48,7 @@ namespace conex::extensions {
     data_t m_data;
     util::frame_ptr m_frame;
     util::frame_ptr m_lab_frame;
-    util::vector_d m_position;
+    util::point_d m_position;
     util::vector_d m_momentum;
 
   public:
@@ -77,7 +78,7 @@ namespace conex::extensions {
       m_lab_frame = util::frame::create((axis::x, -theta_lab)*(axis::z, -phi_lab), m_frame);
 
       // position vector
-      m_position = util::vector_d(data().x, data().y, z, util::frame::conex_observer);
+      m_position = util::point_d(data().x, data().y, z, util::frame::conex_observer);
 
       // momentum vector
       m_momentum = util::vector_d(data().Px, data().Py, data().Pz, m_frame);
@@ -98,7 +99,7 @@ namespace conex::extensions {
     {return m_lab_frame;}
 
     // * get position [m]
-    util::vector_d get_position() const
+    util::point_d get_position() const
     {return m_position;}
 
     // * get momentum [GeV]
