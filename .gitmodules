@@ -1,0 +1,3 @@
+[submodule "modules/phys-units"]
+	path = modules/phys-units
+	url = https://gitlab.com/luan.arbeletche/phys-units
