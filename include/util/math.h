@@ -1,6 +1,8 @@
 #ifndef _util_math_h
 #define _util_math_h
 
+#include <array>
+#include <cmath>
 #include <string>
 
 namespace util::math {
