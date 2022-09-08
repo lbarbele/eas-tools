@@ -23,8 +23,8 @@ namespace models::atmosphere {
     int m_nlayers;
     std::vector<units::depth_t> m_a;
     std::vector<units::depth_t> m_b;
-    std::vector<units::height_t> m_c;
-    std::vector<units::height_t> m_height_boundaries;
+    std::vector<units::length_t> m_c;
+    std::vector<units::length_t> m_height_boundaries;
     std::vector<units::depth_t> m_depth_boundaries;
 
   public:
@@ -48,7 +48,7 @@ namespace models::atmosphere {
     // * get index of atmopsheric layer correspoding to given height
     int
     get_layer_index(
-      units::height_t height
+      units::length_t height
     ) const
     {
       if (height < m_height_boundaries.front()) {
@@ -96,7 +96,7 @@ namespace models::atmosphere {
     // * vertical mass overburden as a function of height
     units::depth_t
     get_depth(
-      const units::height_t h
+      const units::length_t h
     ) const
     {
       const int ilayer = get_layer_index(h);
@@ -106,7 +106,7 @@ namespace models::atmosphere {
     }
 
     // * compute height given vertical mass overburden
-    units::height_t
+    units::length_t
     get_height(
       const units::depth_t depth
     ) const
@@ -120,7 +120,7 @@ namespace models::atmosphere {
     // * air density as a function of height
     units::density_t
     get_density(
-      const units::height_t h
+      const units::length_t h
     ) const
     {
       const int ilayer = get_layer_index(h);
@@ -144,20 +144,20 @@ namespace models::atmosphere {
     // * air density at given point
     units::density_t
     get_density(
-      const util::point_t<units::height_t>& pi
+      const util::point_t<units::length_t>& pi
     ) const
     {
       static const util::point_d c(0, 0, -util::constants::earth_radius, util::frame::standard);
       const util::point_d a(pi.x().get_value(), pi.y().get_value(), pi.z().get_value(), pi.get_frame());
-      const units::height_t height((a-c).norm() - util::constants::earth_radius);
+      const units::length_t height((a-c).norm() - util::constants::earth_radius);
       return get_density(height);
     }
 
     // * traversed mass between two points
     units::depth_t
     get_traversed_mass(
-      const util::point_t<units::height_t>& ai,
-      const util::point_t<units::height_t>& bi
+      const util::point_t<units::length_t>& ai,
+      const util::point_t<units::length_t>& bi
     ) const
     {
       // alias to earth radius
@@ -190,8 +190,8 @@ namespace models::atmosphere {
           const double f = s_cross / separation.norm();
           const auto cpt_a = a + (1 - 1e-10) * f * separation;
           const auto cpt_b = a + (1 + 1e-10) * f * separation;
-          const util::point_t<units::height_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
-          const util::point_t<units::height_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
+          const util::point_t<units::length_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
+          const util::point_t<units::length_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
           return get_traversed_mass(cross_point_a, ai) + get_traversed_mass(cross_point_b, bi);
         } else {
           // no change of signal in cos_theta, simply invert points
@@ -200,8 +200,8 @@ namespace models::atmosphere {
       }
 
       // compute initial/final heights (in meters !)
-      const units::height_t ha(ra.norm() - rea);
-      const units::height_t hb(rb.norm() - rea);
+      const units::length_t ha(ra.norm() - rea);
+      const units::length_t hb(rb.norm() - rea);
 
       // get layer indices
       const auto ia = get_layer_index(ha);
@@ -215,8 +215,8 @@ namespace models::atmosphere {
         const double f = s_cross / separation.norm();
         const auto cpt_a = a + (1 - 1e-10) * f * separation;
         const auto cpt_b = a + (1 + 1e-10) * f * separation;
-        const util::point_t<units::height_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
-        const util::point_t<units::height_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
+        const util::point_t<units::length_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
+        const util::point_t<units::length_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
         return get_traversed_mass(ai, cross_point_a) + get_traversed_mass(cross_point_b, bi);
       }
 
@@ -247,10 +247,10 @@ namespace models::atmosphere {
     }
 
     // * traversed length
-    util::point_t<units::height_t>
+    util::point_t<units::length_t>
     propagate(
-      const util::point_t<units::height_t>& ai,
-      const util::vector_t<units::height_t>& d,
+      const util::point_t<units::length_t>& ai,
+      const util::vector_t<units::length_t>& d,
       const units::depth_t traversed_mass
     ) const
     {
@@ -263,7 +263,7 @@ namespace models::atmosphere {
       const unsigned max_iterations = 100;
 
       const auto to_meter = [](const util::point_d p) {
-        return util::point_t<units::height_t>(p.x()*1_m, p.y()*1_m, p.z()*1_m, p.get_frame());
+        return util::point_t<units::length_t>(p.x()*1_m, p.y()*1_m, p.z()*1_m, p.get_frame());
       };
 
       // - unit conversion
@@ -285,12 +285,12 @@ namespace models::atmosphere {
       }
 
       // * initial altitude and depth
-      const units::height_t starting_altitude = 1_m * (position_vector.norm() - rea);
+      const units::length_t starting_altitude = 1_m * (position_vector.norm() - rea);
       const units::depth_t starting_vertical_depth = get_depth(starting_altitude);
 
       // * approximation to ending depth/altitude
       const units::depth_t ending_vertical_depth = starting_vertical_depth + traversed_mass * cos_theta;
-      const units::height_t ending_altitude = get_height(ending_vertical_depth);
+      const units::length_t ending_altitude = get_height(ending_vertical_depth);
 
       // * approximated displacement
       double displacement = ((starting_altitude - ending_altitude) / 1_m ) / cos_theta;

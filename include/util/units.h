@@ -16,11 +16,11 @@ namespace units {
   units_set_literal(grams_per_cubed_centimeter, gcm3);
   units_set_quantity_alias(grams_per_cubed_centimeter);
 
-  // * quantity aliases
+  // * aliases for scalar quantities
+
   using depth_t = units::grams_per_squared_centimeter_t<double>;
   using density_t = units::grams_per_cubed_centimeter_t<double>;
-  using height_t = units::meter_t<double>;
-
+  using length_t = units::meter_t<double>;
 }
 
 #endif
