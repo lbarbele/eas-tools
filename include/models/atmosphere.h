@@ -7,113 +7,25 @@
 #include <string_view>
 #include <ostream>
 
+#include <util/math.h>
 #include <util/point.h>
 #include <util/vector.h>
 #include <util/constants.h>
 
+#include <util/units.h>
+
 namespace models::atmosphere {
-
-  inline namespace units {
-
-    template <class UnitT>
-    class quantity_t {
-    private:
-      long double value;
-
-    public:
-      using type = quantity_t;
-      using unit = UnitT;
-
-      explicit constexpr quantity_t<UnitT>(const long double v = 0) : value(v) {}
-
-      double get_value() const
-      {return value;}
-
-
-      constexpr type& operator *= (const long double x) {value *= x; return *this;}
-      constexpr type& operator /= (const long double x) {value /= x; return *this;}
-      constexpr type& operator += (const type other) {value += other.value; return *this;}
-      constexpr type& operator -= (const type other) {value -= other.value; return *this;}
-
-      constexpr type operator+(const type other) const {return type{value + other.value};}
-      constexpr type operator-(const type other) const {return type{value - other.value};}
-
-      constexpr type operator*(const long double x) const {return type{value*x};}
-      constexpr type operator/(const long double x) const {return type{value/x};}
-
-      constexpr long double operator/(const type other) const {return value/other.value;}
-
-      constexpr type operator-() const {return type{-value};}
-      constexpr type operator+() const {return type{+value};}
-
-      constexpr bool operator<(const type other) const {return value < other.value;}
-      constexpr bool operator>(const type other) const {return value > other.value;}
-
-      constexpr bool operator<=(const type other) const {return value <= other.value;}
-      constexpr bool operator>=(const type other) const {return value >= other.value;}
-
-      constexpr bool operator==(const type other) const {return value == other.value;}
-      constexpr bool operator!=(const type other) const {return value != other.value;}
-    };
-
-    // * multiply quantity from lhs
-    template <class Un>
-    constexpr auto operator*(const long double x, const quantity_t<Un>& q)
-    {return q*x;}
-
-    // * print quantity
-    template <class CharT, class Traits, class UnitT>
-    std::basic_ostream<CharT, Traits>&
-    operator<<(std::basic_ostream<CharT, Traits>& os, const quantity_t<UnitT>& q)
-    {return os << q.get_value() << " " << UnitT::symbol;}
-    
-
-    struct unit_t {
-      static constexpr inline std::string_view symbol = "?";
-    };
-
-    struct gcm_t
-    : public unit_t {
-      static constexpr inline std::string_view symbol = "g cm^-2";
-    };
-    using depth_t = quantity_t<gcm_t>;
-
-    struct meters_t
-    : public unit_t {
-      static constexpr inline std::string_view symbol = "m";
-    };
-    using height_t = quantity_t<meters_t>;
-
-    struct gram_per_cubic_cm_t
-    : public unit_t {
-      static constexpr inline std::string_view symbol = "g cm^-3";
-    };
-    using density_t = quantity_t<gram_per_cubic_cm_t>;
-
-  }
-
-  inline namespace literals {
-    constexpr auto operator"" _m(const long double value){return height_t{value};}
-    constexpr auto operator"" _m(const unsigned long long value){return height_t{static_cast<long double>(value)};}
-
-    constexpr auto operator"" _cm(const long double value){return height_t{0.01*value};}
-    constexpr auto operator"" _cm(const unsigned long long value){return height_t{0.01*static_cast<long double>(value)};}
-
-    constexpr auto operator"" _gcm2(const long double value){return depth_t{value};}
-    constexpr auto operator"" _gcm2(const unsigned long long value){return depth_t{static_cast<long double>(value)};}
-
-    constexpr auto operator"" _gcm3(const long double value){return density_t{value};}
-    constexpr auto operator"" _gcm3(const unsigned long long value){return density_t{static_cast<long double>(value)};}
-  }
+  
+  using namespace units::literals;
 
   class us_standard {
   public:
     int m_nlayers;
-    std::vector<depth_t> m_a;
-    std::vector<depth_t> m_b;
-    std::vector<height_t> m_c;
-    std::vector<height_t> m_height_boundaries;
-    std::vector<depth_t> m_depth_boundaries;
+    std::vector<units::depth_t> m_a;
+    std::vector<units::depth_t> m_b;
+    std::vector<units::height_t> m_c;
+    std::vector<units::height_t> m_height_boundaries;
+    std::vector<units::depth_t> m_depth_boundaries;
 
   public:
 
@@ -136,7 +48,7 @@ namespace models::atmosphere {
     // * get index of atmopsheric layer correspoding to given height
     int
     get_layer_index(
-      height_t height
+      units::height_t height
     ) const
     {
       if (height < m_height_boundaries.front()) {
@@ -160,7 +72,7 @@ namespace models::atmosphere {
     // * same as above, but for given height
     int
     get_layer_index(
-      const depth_t depth
+      const units::depth_t depth
     ) const
     {
       if (depth < m_depth_boundaries.back()) {
@@ -182,9 +94,9 @@ namespace models::atmosphere {
     }
     
     // * vertical mass overburden as a function of height
-    depth_t
+    units::depth_t
     get_depth(
-      const height_t h
+      const units::height_t h
     ) const
     {
       const int ilayer = get_layer_index(h);
@@ -194,9 +106,9 @@ namespace models::atmosphere {
     }
 
     // * compute height given vertical mass overburden
-    height_t
+    units::height_t
     get_height(
-      const depth_t depth
+      const units::depth_t depth
     ) const
     {
       const int ilayer = get_layer_index(depth);
@@ -206,46 +118,46 @@ namespace models::atmosphere {
     }
 
     // * air density as a function of height
-    density_t
+    units::density_t
     get_density(
-      const height_t h
+      const units::height_t h
     ) const
     {
       const int ilayer = get_layer_index(h);
       return (ilayer < m_nlayers-1)?
-        density_t((m_b[ilayer]/1_gcm2) / (m_c[ilayer]/1_cm)) * std::exp(-h/m_c[ilayer]) : 
-        density_t((m_b[ilayer]/1_gcm2) / (m_c[ilayer]/1_cm));
+        (m_b[ilayer] / m_c[ilayer]) * std::exp(-h/m_c[ilayer]) : 
+        (m_b[ilayer] / m_c[ilayer]);
     }
 
     // * air density as a function of depth
-    density_t
+    units::density_t
     get_density(
-      const depth_t depth
+      const units::depth_t depth
     ) const
     {
       const int ilayer = get_layer_index(depth);
       return (ilayer < m_nlayers-1)?
-        density_t((depth/1_gcm2 - m_a[ilayer]/1_gcm2) / (m_c[ilayer]/1_cm)) : 
-        density_t((m_b[ilayer]/1_gcm2) / (m_c[ilayer]/1_cm));
+        (depth - m_a[ilayer])/m_c[ilayer] :
+        m_b[ilayer]/m_c[ilayer];
     }
 
     // * air density at given point
-    density_t
+    units::density_t
     get_density(
-      const util::point_t<height_t>& pi
+      const util::point_t<units::height_t>& pi
     ) const
     {
       static const util::point_d c(0, 0, -util::constants::earth_radius, util::frame::standard);
       const util::point_d a(pi.x().get_value(), pi.y().get_value(), pi.z().get_value(), pi.get_frame());
-      const height_t height((a-c).norm() - util::constants::earth_radius);
+      const units::height_t height((a-c).norm() - util::constants::earth_radius);
       return get_density(height);
     }
 
     // * traversed mass between two points
-    depth_t
+    units::depth_t
     get_traversed_mass(
-      const util::point_t<height_t>& ai,
-      const util::point_t<height_t>& bi
+      const util::point_t<units::height_t>& ai,
+      const util::point_t<units::height_t>& bi
     ) const
     {
       // alias to earth radius
@@ -278,8 +190,8 @@ namespace models::atmosphere {
           const double f = s_cross / separation.norm();
           const auto cpt_a = a + (1 - 1e-10) * f * separation;
           const auto cpt_b = a + (1 + 1e-10) * f * separation;
-          const util::point_t<height_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
-          const util::point_t<height_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
+          const util::point_t<units::height_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
+          const util::point_t<units::height_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
           return get_traversed_mass(cross_point_a, ai) + get_traversed_mass(cross_point_b, bi);
         } else {
           // no change of signal in cos_theta, simply invert points
@@ -288,8 +200,8 @@ namespace models::atmosphere {
       }
 
       // compute initial/final heights (in meters !)
-      const height_t ha(ra.norm() - rea);
-      const height_t hb(rb.norm() - rea);
+      const units::height_t ha(ra.norm() - rea);
+      const units::height_t hb(rb.norm() - rea);
 
       // get layer indices
       const auto ia = get_layer_index(ha);
@@ -303,8 +215,8 @@ namespace models::atmosphere {
         const double f = s_cross / separation.norm();
         const auto cpt_a = a + (1 - 1e-10) * f * separation;
         const auto cpt_b = a + (1 + 1e-10) * f * separation;
-        const util::point_t<height_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
-        const util::point_t<height_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
+        const util::point_t<units::height_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
+        const util::point_t<units::height_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
         return get_traversed_mass(ai, cross_point_a) + get_traversed_mass(cross_point_b, bi);
       }
 
@@ -328,18 +240,18 @@ namespace models::atmosphere {
         double integral = util::math::romberg_integral(lower, upper, tolerance, integrand);
         integral *= m_b[ilayer] / 1_gcm2;
       
-        return depth_t(integral);
+        return units::depth_t(integral);
       } else {
-        return depth_t(separation.norm() * 100 * (get_density(ha) / 1_gcm3));
+        return units::depth_t(separation.norm() * 100 * (get_density(ha) / 1_gcm3));
       }
     }
 
     // * traversed length
-    util::point_t<height_t>
+    util::point_t<units::height_t>
     propagate(
-      const util::point_t<height_t>& ai,
-      const util::vector_t<height_t>& d,
-      const depth_t traversed_mass
+      const util::point_t<units::height_t>& ai,
+      const util::vector_t<units::height_t>& d,
+      const units::depth_t traversed_mass
     ) const
     {
       // - constants and helpers
@@ -351,7 +263,7 @@ namespace models::atmosphere {
       const unsigned max_iterations = 100;
 
       const auto to_meter = [](const util::point_d p) {
-        return util::point_t<height_t>(p.x()*1_m, p.y()*1_m, p.z()*1_m, p.get_frame());
+        return util::point_t<units::height_t>(p.x()*1_m, p.y()*1_m, p.z()*1_m, p.get_frame());
       };
 
       // - unit conversion
@@ -373,12 +285,12 @@ namespace models::atmosphere {
       }
 
       // * initial altitude and depth
-      const height_t starting_altitude = 1_m * (position_vector.norm() - rea);
-      const depth_t starting_vertical_depth = get_depth(starting_altitude);
+      const units::height_t starting_altitude = 1_m * (position_vector.norm() - rea);
+      const units::depth_t starting_vertical_depth = get_depth(starting_altitude);
 
       // * approximation to ending depth/altitude
-      const depth_t ending_vertical_depth = starting_vertical_depth + traversed_mass * cos_theta;
-      const height_t ending_altitude = get_height(ending_vertical_depth);
+      const units::depth_t ending_vertical_depth = starting_vertical_depth + traversed_mass * cos_theta;
+      const units::height_t ending_altitude = get_height(ending_vertical_depth);
 
       // * approximated displacement
       double displacement = ((starting_altitude - ending_altitude) / 1_m ) / cos_theta;
