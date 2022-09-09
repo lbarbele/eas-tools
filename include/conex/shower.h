@@ -64,22 +64,15 @@ namespace conex {
     {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}
 
     // primary energy
-    float get_lge() const
-    {return lgE;}
-
-    double get_energy_gev() const
-    {return std::pow(10, lgE - 9);}
+    auto get_energy() const
+    {return units::gigaelectron_volt_t<double>(std::pow(10, lgE - 9));}
 
     // zenith/azimuth of shower axis
-    float get_zenith_deg() const
-    {return zenith;}
-    double get_zenith_rad() const
-    {return zenith*util::constants::pi/180.;}
+    auto get_zenith() const
+    {return units::degree_t<double>(zenith);}
 
-    float get_azimuth_deg() const
-    {return azimuth;}
-    double get_azimuth_rad() const
-    {return azimuth*util::constants::pi/180.;}
+    auto get_azimuth() const
+    {return units::degree_t<double>(azimuth);}
 
     // random seeds
     int get_seed2() const
@@ -89,80 +82,91 @@ namespace conex {
     {return Seed3;}
 
     // data from the first interaction
-    float get_first_interaction_depth() const
-    {return Xfirst;}
+    auto get_first_interaction_depth() const
+    {return units::grams_per_squared_centimeter_t<double>(Xfirst);}
 
-    float get_first_interaction_height() const
-    {return Hfirst;}
+    auto get_first_interaction_height() const
+    {return units::meter_t<double>(Hfirst);}
 
     float get_first_interaction_inelasticty() const
     {return XfirstIn;}
 
     // impact parameter
-    double get_altitude() const
-    {return altitude;}
+    auto get_altitude() const
+    {return units::meter_t<double>(altitude);}
 
     // gaisser hillas fit (6 parameters)
-    float get_x0() const
-    {return X0;}
+    auto get_x0() const
+    {return units::grams_per_squared_centimeter_t<double>(X0);}
 
-    float get_xmax() const
-    {return Xmax;}
+    auto get_xmax() const
+    {return units::grams_per_squared_centimeter_t<double>(Xmax);}
 
-    float get_nmax() const
+    double get_nmax() const
     {return Nmax;}
 
-    float get_p1() const
-    {return p1;}
+    auto get_p1() const
+    {return units::grams_per_squared_centimeter_t<double>(p1);}
 
-    float get_p2() const
+    double get_p2() const
     {return p2;}
 
-    float get_p3() const
-    {return p3;}
+    auto get_p3() const
+    {return p3 / units::grams_per_squared_centimeter_t<double>(1);}
 
     float get_chi2() const
     {return chi2;}
 
     // real xmax
-    float get_xmx() const
-    {return Xmx;}
+    auto get_xmx() const
+    {return units::grams_per_squared_centimeter_t<double>(Xmx);}
 
     // real nmax
     float get_nmx() const
     {return Nmx;}
 
     // real xmax of dEdX profile
-    float get_xmx_dedx() const
-    {return XmxdEdX;}
+    auto get_xmx_dedx() const
+    {return units::grams_per_squared_centimeter_t<double>(XmxdEdX);}
 
     // real max value of dEdX profile
-    float get_dedx_mx() const
-    {return dEdXmx;}
+    auto get_dedx_mx() const
+    {
+      using namespace units::literals;
+      return dEdXmx * (1_GeV/1_gcm2);
+    }
 
     // cpu time in seconds
-    float get_cpu_time() const
-    {return cpuTime;}
+    auto get_cpu_time() const
+    {return units::second_t<double>(cpuTime);}
 
     // number of points in the longitudinal profiles
     int get_nx() const
     {return nX;}
 
     // actual profiles
-    const float* get_depths() const
-    {return X;}
+    auto get_depths() const
+    {
+      using quantity_type = units::grams_per_squared_centimeter_t<float>;
+      return (quantity_type*)X;
+    }
 
     const float* get_charged() const
     {return N;}
 
-    const float* get_heights() const
-    {return H;}
+    auto get_heights() const
+    {return (units::meter_t<float>*)H;}
 
-    const float* get_distances() const
-    {return D;}
+    auto get_distances() const
+    {return (units::meter_t<float>*)D;}
 
-    const float* get_dedx() const
-    {return dEdX;}
+    auto get_dedx() const
+    {
+      using namespace units;
+      using unit_type = make_unit<gigaelectron_volt, inverse<grams_per_squared_centimeter>>;
+      using quantity_type = quantity<unit_type, float>;
+      return (quantity_type*)dEdX;
+    }
 
     const float* get_muons() const
     {return Mu;}
@@ -180,14 +184,14 @@ namespace conex {
     {return dMu;}
 
     // energy at ground
-    float get_ground_energy_em() const
-    {return EGround[0];}
+    auto get_ground_energy_em() const
+    {return units::gigaelectron_volt_t<double>(EGround[0]);}
 
-    float get_ground_energy_hadrons() const
-    {return EGround[1];}
+    auto get_ground_energy_hadrons() const
+    {return units::gigaelectron_volt_t<double>(EGround[1]);}
 
-    float get_ground_energy_muons() const
-    {return EGround[2];}
+    auto get_ground_energy_muons() const
+    {return units::gigaelectron_volt_t<double>(EGround[2]);}
   };
 
 } // namespace conex
