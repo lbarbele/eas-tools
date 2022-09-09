@@ -5,9 +5,11 @@
 
 #include <util/frame.h>
 #include <util/point.h>
+#include <util/math.h>
 #include <util/vector.h>
 #include <util/constants.h>
 #include <util/rotation_matrix.h>
+#include <util/units.h>
 
 namespace conex::extensions {
 
@@ -62,19 +64,21 @@ namespace conex::extensions {
       namespace ct = util::constants;
       using util::axis;
 
+      using namespace units::literals;
+
       // auxiliar quantities
       const double r_obs = std::hypot(data().x, data().y);
       const double dist_center = data().height + ct::earth_radius;
       const double z = std::sqrt((dist_center+r_obs)*(dist_center-r_obs)) - ct::earth_radius;
 
       // the particle frame
-      const double phi = std::atan2(data().y, data().x);
-      const double theta_ea = std::asin(r_obs / dist_center);
-      m_frame = util::frame<double>::create((axis::x, ct::pi - theta_ea)*(axis::z, phi- ct::pi/2.0), util::frame<double>::conex_observer);
+      const auto phi = util::math::atan2(data().y, data().x);
+      const auto theta_ea = util::math::asin(r_obs / dist_center);
+      m_frame = util::frame<double>::create((axis::x, 1_pi - theta_ea)*(axis::z, phi - 0.5_pi), util::frame<double>::conex_observer);
 
       // the lab frame (in which secondaries are produced)
-      const double phi_lab = std::atan2(data().s0xs, data().c0xs);
-      const double theta_lab = std::atan2(data().s0s, data().c0s);
+      const auto phi_lab = util::math::atan2(data().s0xs, data().c0xs);
+      const auto theta_lab = util::math::atan2(data().s0s, data().c0s);
       m_lab_frame = util::frame<double>::create((axis::x, -theta_lab)*(axis::z, -phi_lab), m_frame);
 
       // position vector

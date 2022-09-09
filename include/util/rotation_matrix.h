@@ -4,6 +4,8 @@
 #include <cmath>
 
 #include <util/matrix.h>
+#include <util/units.h>
+#include <util/math.h>
 
 namespace util {
 
@@ -17,17 +19,17 @@ namespace util {
   // * rotation matrix class
   class rotation_matrix : public square_matrix_d<3> {
   public:
+
     // * build rotation matrix from single rotation around specified axis
-    constexpr
     rotation_matrix(
       const axis ax,
-      const double angle
+      const units::radian_t<double> angle
     ) :
       square_matrix_d<3>(0)
     {
       // * sine/cosine of the rotation angle
-      const double sin_angle = std::sin(angle);
-      const double cos_angle = std::cos(angle);
+      const double sin_angle = math::sin(angle);
+      const double cos_angle = math::cos(angle);
 
       // * some helper indices
       const size_t iaxis = static_cast<size_t>(ax);
@@ -46,13 +48,13 @@ namespace util {
   };
 
   // * shorthand notation to create a rotation matrix
-  constexpr
   rotation_matrix
   operator,(
     const axis ax,
-    const double angle
+    const concepts::quantity_compatible<units::radian_t<double>> auto& angle
   )
   {
+    using namespace units::literals;
     return rotation_matrix(ax, angle);
   }
 
