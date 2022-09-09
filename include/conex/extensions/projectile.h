@@ -46,8 +46,8 @@ namespace conex::extensions {
 
   private:
     data_t m_data;
-    util::frame_ptr m_frame;
-    util::frame_ptr m_lab_frame;
+    util::frame_ptr<double> m_frame;
+    util::frame_ptr<double> m_lab_frame;
     util::point_d m_position;
     util::vector_d m_momentum;
 
@@ -70,15 +70,15 @@ namespace conex::extensions {
       // the particle frame
       const double phi = std::atan2(data().y, data().x);
       const double theta_ea = std::asin(r_obs / dist_center);
-      m_frame = util::frame::create((axis::x, ct::pi - theta_ea)*(axis::z, phi- ct::pi/2.0), util::frame::conex_observer);
+      m_frame = util::frame<double>::create((axis::x, ct::pi - theta_ea)*(axis::z, phi- ct::pi/2.0), util::frame<double>::conex_observer);
 
       // the lab frame (in which secondaries are produced)
       const double phi_lab = std::atan2(data().s0xs, data().c0xs);
       const double theta_lab = std::atan2(data().s0s, data().c0s);
-      m_lab_frame = util::frame::create((axis::x, -theta_lab)*(axis::z, -phi_lab), m_frame);
+      m_lab_frame = util::frame<double>::create((axis::x, -theta_lab)*(axis::z, -phi_lab), m_frame);
 
       // position vector
-      m_position = util::point_d(data().x, data().y, z, util::frame::conex_observer);
+      m_position = util::point_d(data().x, data().y, z, util::frame<double>::conex_observer);
 
       // momentum vector
       m_momentum = util::vector_d(data().Px, data().Py, data().Pz, m_frame);
@@ -91,11 +91,11 @@ namespace conex::extensions {
     // - Formatted access to the projectile data
 
     // * access to the conex "particle" frame
-    const util::frame_ptr& get_frame() const
+    const util::frame_ptr<double>& get_frame() const
     {return m_frame;}
 
     // * access to the conex "lab" frame, in which secondary momenta is defined
-    const util::frame_ptr& get_lab_frame() const
+    const util::frame_ptr<double>& get_lab_frame() const
     {return m_lab_frame;}
 
     // * get position [m]

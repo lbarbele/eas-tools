@@ -3,7 +3,16 @@
 
 #include <type_traits>
 
+#include <units/units.h>
+
 namespace util {
+
+  namespace concepts {
+    using namespace units::concepts;
+
+    template <class T>
+    concept scalar = units::concepts::quantity<T> || units::concepts::arithmetic<T>;
+  }
 
   // * base classes
   class matrix_base_t {};

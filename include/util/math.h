@@ -5,7 +5,11 @@
 #include <cmath>
 #include <string>
 
+#include <units/math.h>
+
 namespace util::math {
+
+  using namespace units::math;
 
   double
   gaisser_hillas(

@@ -48,7 +48,7 @@ namespace conex::extensions {
   
   private:
     data_t m_data;
-    util::frame_ptr m_frame;
+    util::frame_ptr<double> m_frame;
     projectile_ptr m_precursor;
 
   public:
@@ -56,7 +56,7 @@ namespace conex::extensions {
     // - Constructor
     particle(
       const data_t& tree_data,
-      const util::frame_ptr& lab_frame,
+      const util::frame_ptr<double>& lab_frame,
       const std::shared_ptr<projectile> precursor
     )
     : m_data(tree_data),
@@ -72,7 +72,7 @@ namespace conex::extensions {
     const projectile_ptr& get_precursor() const
     {return m_precursor;}
 
-    const util::frame_ptr& get_frame() const
+    const util::frame_ptr<double>& get_frame() const
     {return m_frame;}
 
     util::point_d get_formation_point() const

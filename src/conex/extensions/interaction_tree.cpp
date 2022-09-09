@@ -38,7 +38,7 @@ namespace {
     // it is required that, if particle is propagated up to the projectile interaction
     // time, its distance to the interaction point is smaller than 0.1 mm
     const double deltaTime = proj->get_time_s() - part->get_formation_time_s();
-    const auto particleVelocity = part->get_velocity().on_frame(util::frame::conex_observer);
+    const auto particleVelocity = part->get_velocity().on_frame(util::frame<double>::conex_observer);
     const auto particleDisplacement = deltaTime * particleVelocity;
     const auto particleNewPos = part->get_formation_point() + particleDisplacement;
     const auto posDif = particleNewPos - proj->get_position();

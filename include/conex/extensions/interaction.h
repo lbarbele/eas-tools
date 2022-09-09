@@ -73,10 +73,10 @@ namespace conex::extensions {
 
     // - Access to conex frames
 
-    const util::frame_ptr& get_frame() const
+    const util::frame_ptr<double>& get_frame() const
     {return get_projectile()->get_frame();}
 
-    const util::frame_ptr& get_lab_frame() const
+    const util::frame_ptr<double>& get_lab_frame() const
     {return get_projectile()->get_lab_frame();}
 
     // - Formatted access to the tree data

@@ -8,6 +8,7 @@
 
 #include <util/constants.h>
 #include <util/gaisser_hillas_fit.h>
+#include <util/units.h>
 #include <util/vector.h>
 
 namespace conex {
@@ -65,7 +66,7 @@ namespace conex {
     // primary energy
     float get_lge() const
     {return lgE;}
-    
+
     double get_energy_gev() const
     {return std::pow(10, lgE - 9);}
 

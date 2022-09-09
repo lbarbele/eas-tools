@@ -27,7 +27,7 @@ namespace conex {
       std::sin(theta) * std::cos(phi),
       std::sin(theta) * std::sin(phi),
       std::cos(theta),
-      util::frame::conex_observer
+      util::frame<double>::conex_observer
     );
   }
 

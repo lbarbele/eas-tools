@@ -2,6 +2,7 @@
 #define _util_units_h
 
 #include <units/units.h>
+#include <units/angular.h>
 
 namespace units {
   // * new units 

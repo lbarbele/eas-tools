@@ -21,8 +21,8 @@ namespace util {
 
   public:
     // - Types
-    using elem_t = T;
-    using matrix_t = matrix<T, M, N>;
+    using value_type = T;
+    using type = matrix<T, M, N>;
     using transpose_t = matrix<T, N, M>;
 
     // - Constructors
@@ -71,15 +71,15 @@ namespace util {
 
     // * perform unary operation on every element
     template <class UnaryOp>
-    constexpr matrix_t& apply(UnaryOp op);
+    constexpr matrix& apply(UnaryOp op);
 
     // * perform binary operation on every element, using the elements of another matrix
     template <class BinaryOp, class U>
-    constexpr matrix_t& apply(const matrix<U, M, N>& other, BinaryOp op);
+    constexpr matrix& apply(const matrix<U, M, N>& other, BinaryOp op);
 
     // * transform using unary operator
     template <class UnaryOp>
-    constexpr matrix_t& transform(UnaryOp op);
+    constexpr matrix& transform(UnaryOp op);
 
     // - Matrix transformations
 
@@ -90,25 +90,25 @@ namespace util {
 
     // * (assignemnt) multiplication/division by scalar
     template <class U, typename = enable_if_scalar_t<U> >
-    constexpr matrix_t& operator*=(const U& scalar);
+    constexpr matrix& operator*=(const U& scalar);
 
     template <class U, typename = enable_if_scalar_t<U> >
-    constexpr matrix_t& operator/=(const U& scalar);
+    constexpr matrix& operator/=(const U& scalar);
 
     // * (assignment) sum/subtraction by matrix
     template <class U>
-    constexpr matrix_t& operator+=(const matrix<U, M, N>& rhs);
+    constexpr matrix& operator+=(const matrix<U, M, N>& rhs);
 
     template <class U>
-    constexpr matrix_t& operator-=(const matrix<U, M, N>& rhs);
+    constexpr matrix& operator-=(const matrix<U, M, N>& rhs);
 
     // * assignment matrix product (only if rhs is square N x N)
     template <class U>
-    constexpr matrix_t& operator*=(const matrix<U, N, N>& rhs);
+    constexpr matrix& operator*=(const matrix<U, N, N>& rhs);
 
     // * unary plus/minus operators
-    constexpr matrix_t operator+() const;
-    constexpr matrix_t operator-() const;
+    constexpr matrix operator+() const;
+    constexpr matrix operator-() const;
 
     // * matrix sum/subtraction
     template <class U, class R = decltype(T{} + U{})>
