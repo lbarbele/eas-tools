@@ -1,9 +1,6 @@
 #ifndef _conex_shower_h
 #define _conex_shower_h
 
-#include <cmath>
-#include <vector>
-
 #include <TGraph.h>
 
 #include <util/constants.h>
@@ -62,7 +59,7 @@ namespace conex {
 
     // primary energy
     auto get_energy() const
-    {return units::gigaelectron_volt_t<double>(std::pow(10, lgE - 9));}
+    {return units::gigaelectron_volt_t<double>(util::math::pow(10, lgE - 9));}
 
     // zenith/azimuth of shower axis
     auto get_zenith() const
