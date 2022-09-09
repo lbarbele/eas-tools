@@ -19,7 +19,7 @@ namespace units {
   units_set_quantity_alias(grams_per_cubed_centimeter);
 
   // energy in electron volt
-  units_add_derived_unit(electron_volt, eV, make_unit<joule, yocto, ratio<1, 10'000>>);
+  units_add_derived_unit(electron_volt, eV, make_unit<joule, yocto, ratio<1'602'176'634, 10'000>>);
   units_set_prefixes(electron_volt, eV, kilo, mega, giga, tera, peta, exa, zetta);
 
   // * aliases for scalar quantities
