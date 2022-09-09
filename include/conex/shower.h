@@ -7,7 +7,9 @@
 #include <TGraph.h>
 
 #include <util/constants.h>
+#include <util/frame.h>
 #include <util/gaisser_hillas_fit.h>
+#include <util/math.h>
 #include <util/units.h>
 #include <util/vector.h>
 
@@ -56,12 +58,7 @@ namespace conex {
 
   public:
 
-    TGraph graph_dedx() const;
-
-    util::vector_d get_axis() const;
-
-    util::gaisser_hillas_fit get_fit() const
-    {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}
+    // * direct access to CONEX scalar data
 
     // primary energy
     auto get_energy() const
@@ -88,7 +85,7 @@ namespace conex {
     auto get_first_interaction_height() const
     {return units::meter_t<double>(Hfirst);}
 
-    float get_first_interaction_inelasticty() const
+    double get_first_interaction_inelasticty() const
     {return XfirstIn;}
 
     // impact parameter
@@ -114,7 +111,7 @@ namespace conex {
     auto get_p3() const
     {return p3 / units::grams_per_squared_centimeter_t<double>(1);}
 
-    float get_chi2() const
+    double get_chi2() const
     {return chi2;}
 
     // real xmax
@@ -122,7 +119,7 @@ namespace conex {
     {return units::grams_per_squared_centimeter_t<double>(Xmx);}
 
     // real nmax
-    float get_nmx() const
+    double get_nmx() const
     {return Nmx;}
 
     // real xmax of dEdX profile
@@ -144,7 +141,8 @@ namespace conex {
     int get_nx() const
     {return nX;}
 
-    // actual profiles
+    // * profiles
+
     auto get_depths() const
     {
       using quantity_type = units::grams_per_squared_centimeter_t<float>;
@@ -183,7 +181,8 @@ namespace conex {
     const float* get_mpd() const
     {return dMu;}
 
-    // energy at ground
+    // * energy at ground
+    
     auto get_ground_energy_em() const
     {return units::gigaelectron_volt_t<double>(EGround[0]);}
 
@@ -192,6 +191,42 @@ namespace conex {
 
     auto get_ground_energy_muons() const
     {return units::gigaelectron_volt_t<double>(EGround[2]);}
+
+    // * access to the gaisser hillas fit
+
+    util::gaisser_hillas_fit get_fit() const
+    {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}
+
+    // * generate profile TGraphs
+
+    TGraph
+    graph_dedx()
+    const
+    {
+      using namespace units::literals;
+      TGraph g(get_nx() - 1);
+      for (int i = 0; i < get_nx() - 1; ++i) {
+        const units::depth_t x = 0.5*(get_depths()[i] + get_depths()[i+1]);
+        g.SetPoint(i, x/1_gcm2, get_dedx()[i] * (1_gcm2/1_GeV));
+      }
+      return g;
+    }
+
+    // * get vector holding the shower axis
+
+    util::vector_d
+    get_axis()
+    const
+    {
+      const auto theta = get_zenith();
+      const auto phi = get_zenith();
+      return util::vector_d(
+        util::math::sin(theta) * util::math::cos(phi),
+        util::math::sin(theta) * util::math::sin(phi),
+        util::math::cos(theta),
+        util::frame<double>::conex_observer
+      );
+    }
   };
 
 } // namespace conex
