@@ -159,8 +159,7 @@ namespace conex {
     {
       using namespace units;
       using unit_type = make_unit<gigaelectron_volt, inverse<grams_per_squared_centimeter>>;
-      using quantity_type = quantity<unit_type, float>;
-      return (quantity_type*)dEdX;
+      return (quantity<unit_type, float>*)dEdX;
     }
 
     const float* get_muons() const
@@ -216,12 +215,12 @@ namespace conex {
     const
     {
       const auto theta = get_zenith();
-      const auto phi = get_zenith();
+      const auto phi = get_azimuth();
       return util::vector_d(
         util::math::sin(theta) * util::math::cos(phi),
         util::math::sin(theta) * util::math::sin(phi),
         util::math::cos(theta),
-        util::frame<double>::conex_observer
+        util::frame::conex_observer
       );
     }
   };
