@@ -22,6 +22,9 @@ namespace units {
   units_add_derived_unit(electron_volt, eV, make_unit<joule, yocto, ratio<1'602'176'634, 10'000>>);
   units_set_prefixes(electron_volt, eV, kilo, mega, giga, tera, peta, exa, zetta);
 
+  // speed of light
+  units_add_derived_unit(c, c, make_unit<ratio<299'792'458>, meter, inverse<second>>);
+
   // * aliases for scalar quantities
 
   using depth_t = units::grams_per_squared_centimeter_t<double>;
