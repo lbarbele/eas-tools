@@ -1,67 +1,60 @@
 #ifndef _util_frame_h
 #define _util_frame_h
 
-#include <array>
 #include <concepts>
 #include <memory>
-#include <type_traits>
-
-#include <any>
 
 #include <util/constants.h>
 #include <util/coordinates.h>
 #include <util/matrix.h>
 #include <util/rotation_matrix.h>
+#include <util/type_traits.h>
 
 namespace util {
 
-  // - forward declaration and aliases
+  // - forward declarations
 
-  // * actual frame definition is hidden in _impl namespace
+  // * actual definitions are hidden in _impl namespace
   namespace _impl {
-    template <class T> class frame;
+    // frame class
+    template <concepts::scalar T> class frame;
+
+    // frame_scale is a wrapper for the frame scale type providing the necessary type decays
+    template <concepts::scalar T>
+    struct frame_scale;
+
+    // alias for the decayed type of the frame scale
+    template <class T>
+    using frame_scale_t = typename frame_scale<T>::type;
   }
-
-  // * frame_scale is a wrapper for the frame scale type providing the necessary type decays
-  template <class T>
-  struct frame_scale;
-
-  // * alias for the decayed type of the frame scale
-  template <class T>
-  using frame_scale_t = typename frame_scale<T>::type;
-
-  // * import the frame to the util NS, but with the scale type decayed
-  template <class T>
-  using frame = _impl::frame<frame_scale_t<T>>;
-
-  // * smart pointer for a frame
-  template <class T>
-  using frame_ptr = typename frame<T>::ptr_type;
 
   // - implementation scale type wrapper
 
-  // * specialization for arithmetic types
-  template <units::concepts::arithmetic T>
-  struct frame_scale<T> {
-    using type = std::remove_cvref_t<T>;
-  };
+  namespace _impl {
 
-  // * specialization for quantities with dimensions
-  template <units::concepts::quantity Q>
-  struct frame_scale<Q> {
-    using value_type = typename Q::value_type;
-    using unit_type = units::make_unit<typename Q::unit_type, units::ratio_power<typename Q::unit_type::factor, -1>>;
-    using type = units::quantity<unit_type, value_type>;
-  };
+    // * specialization for arithmetic types
+    template <units::concepts::arithmetic T>
+    struct frame_scale<T> {
+      using type = std::remove_cvref_t<T>;
+    };
+
+    // * specialization for quantities with dimensions
+    template <units::concepts::quantity Q>
+    struct frame_scale<Q> {
+      using value_type = typename Q::value_type;
+      using unit_type = units::make_unit<typename Q::unit_type, units::ratio_power<typename Q::unit_type::factor, -1>>;
+      using type = units::quantity<unit_type, value_type>;
+    };
+
+  }
 
   // - implementation of the frame class
 
   namespace _impl {
 
-    template <class T>
+    template <concepts::scalar T>
     class frame {
     public:
-
       using ptr_type = std::shared_ptr<frame>;
       using scale = T;
 
@@ -177,6 +170,41 @@ namespace util {
     };
 
   }
+
+  // - import aliases
+
+  // ! NOTE
+  //
+  // the idea is that a frame class could represent a frame in an arbitrary scale,
+  // that is, a frame of an arbitrary three-dimensional vector space. in that way,
+  // we could have frame<position> and frame<momentum>, each holding a single
+  // orientation and origin. this is what is implemented in the frame class inside
+  // the _impl namespace, in which the template parameter specifies the frame scale,
+  // which can be any type (for instance, a double, for a frame representing the
+  // phase-space of a dimensionless quantity, or units::meter_t<double>, for a frame
+  // where positions are measured).
+  //
+  // however, this approach brings the difficulty of disa bling the possibility of 
+  // measuring momentum in some frame of position, for instance.
+  // such usage should be acceptable, since any vector quantity depends only on the
+  // orientation of the frame, and not on the origin.
+  //
+  // to avoid such difficulty here, and because we are mostly using frames for vector
+  // quantities, and the only usage of point_t (up to now!) is for measuring positions,
+  // we hide the implementation and expose a single instantiation of the frame template
+  // with a scale of meter_t<long double>.
+  //
+  // this has to be changed in the future. maybe we could implement two nested frame
+  // implementations? one holding a rotation matrix (called orientation_frame)
+  // and one derived that will implement the frame origin (called frame)?
+
+  // * import the frame to the util NS, but with the scale type decayed
+  // hidden: template <class T> using frame = _impl::frame<_impl::frame_scale_t<T>>;
+  using frame = _impl::frame<units::meter_t<long double>>;
+
+  // * smart pointer for a frame
+  // hidden template <class T> using frame_ptr = typename frame<T>::ptr_type;
+  using frame_ptr = typename frame::ptr_type;
 
 }
 

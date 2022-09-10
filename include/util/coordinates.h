@@ -11,39 +11,32 @@
 
 namespace util {
 
-  template <concepts::scalar T>
-  struct coordinates_t : public coordinates_base_t {
+  // - implementation of a type holding raw coordinates
 
-    // - Type aliases
-    
+  template <concepts::scalar T>
+  class coordinates_t : coordinates_base_t {
+  public:
     using value_type = std::remove_cvref_t<T>;
 
-    // - Data
-
+  protected:
     std::array<value_type, 3> m_data;
 
-    // - Constructors
-    
-    constexpr coordinates_t() {};
+  public:
 
-    constexpr coordinates_t(
-      const value_type& x,
-      const value_type& y,
-      const value_type& z
-    ) :
-      m_data{x, y, z}
-    {}
+    // * constructors
 
-    // - Destructor
+    coordinates_t() : m_data{value_type(0), value_type(0), value_type(0)} {}
+    coordinates_t(const value_type& a, const value_type& b, const value_type& c) : m_data{a, b, c} {}
 
-    virtual ~coordinates_t() {}
+    template <std::convertible_to<value_type> U>
+    coordinates_t(const coordinates_t<U> c) : coordinates_t(c.x(), c.y(), c.z()) {}
 
-    // - Spherical coordinates
+    // * compute spherical coordinates
 
-    constexpr auto get_r() const
+    auto get_r() const
     {return util::math::hypot(x(), y(), z());}
 
-    constexpr auto get_theta() const
+    auto get_theta() const
     {
       const auto r = get_r();
       return r > value_type(1e-20)?
@@ -51,16 +44,16 @@ namespace util {
         units::radian_t(0);
     }
 
-    constexpr auto get_phi() const
+    auto get_phi() const
     {
-      return util::math::hypot(x(), y()).get_value() > 1e-20?
+      return util::math::hypot(x(), y()) > value_type(1e-20)?
         util::math::atan2(y(), x()) :
         units::radian_t(0);
     }
 
-    // - Element access
+    // * element access
 
-    // * direct access to x, y, and z coordinates
+    // named access to x, y, and z coordinates
 
     constexpr auto& x() {return m_data[0];}
     constexpr auto& y() {return m_data[1];}
@@ -70,7 +63,7 @@ namespace util {
     constexpr const auto& y() const {return m_data[1];}
     constexpr const auto& z() const {return m_data[2];}
 
-    // * access with bounds checking
+    // indexed access with bounds checking
 
     constexpr auto& at(const size_t i)
     {return m_data.at(i);}
@@ -78,7 +71,7 @@ namespace util {
     constexpr const auto& at(const size_t i) const
     {return m_data.at(i);}
 
-    // * no bounds checking
+    // indexed access w/o bounds checking
 
     constexpr auto& operator[](const size_t i)
     {return m_data[i];}
@@ -86,24 +79,18 @@ namespace util {
     constexpr const auto& operator[](const size_t i) const
     {return m_data[i];}
 
-    // * standard iterators
+    // * iterators
 
     constexpr auto begin() {return m_data.begin();}
     constexpr auto end() {return m_data.end();}
     
-    // * const iterators
-
     constexpr auto begin() const {return m_data.begin();}
     constexpr auto cbegin() const {return m_data.cbegin();}
     constexpr auto end() const {return m_data.end();}
     constexpr auto cend() const {return m_data.cend();}
 
-    // * reverse iterators
-
     constexpr auto rbegin() {return m_data.rbegin();}
     constexpr auto rend() {return m_data.rend();}
-
-    // * const reverse iterators
 
     constexpr auto rbegin() const {return m_data.rbegin();}
     constexpr auto crbegin() const {return m_data.crbegin();}
@@ -111,23 +98,29 @@ namespace util {
     constexpr auto crend() const {return m_data.crend();}
   };
 
-  // * coordinates transformation for any (template) type derived from coordinates_t
+  // * matrix transformation of coordinates for any type derived from coordinates_t
 
-  template <class T, class U, template<class> class CoordT>
-  requires std::derived_from<CoordT<U>, coordinates_t<U>>
+  template <class T, concepts::arithmetic U>
+  requires std::is_base_of_v<coordinates_base_t, T>
   constexpr auto operator*(
-    const square_matrix<T, 3>& mtx,
-    const CoordT<U>& c
+    const square_matrix<U, 3>& mtx,
+    const T& obj
   )
   {
-    CoordT<decltype(T{}*U{})> other = c;
-    other.x() = mtx(0, 0)*c.x() + mtx(0, 1)*c.y() + mtx(0, 2)*c.z();
-    other.y() = mtx(1, 0)*c.x() + mtx(1, 1)*c.y() + mtx(1, 2)*c.z();
-    other.z() = mtx(2, 0)*c.x() + mtx(2, 1)*c.y() + mtx(2, 2)*c.z();
-    return other;
+    // copy every other data member of the derived type
+    auto transformed = obj;
+
+    // then transform the coordinates
+    transformed.x() = mtx(0, 0)*obj.x() + mtx(0, 1)*obj.y() + mtx(0, 2)*obj.z();
+    transformed.y() = mtx(1, 0)*obj.x() + mtx(1, 1)*obj.y() + mtx(1, 2)*obj.z();
+    transformed.z() = mtx(2, 0)*obj.x() + mtx(2, 1)*obj.y() + mtx(2, 2)*obj.z();
+
+    // done
+    return transformed;
   }
 
   // * print coordinates to stream
+
   template<class T, class CharT, class Traits>
   std::basic_ostream<CharT, Traits>&
   operator<<(

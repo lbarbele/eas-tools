@@ -27,47 +27,45 @@ namespace util {
   class point_t : public point_base_t, public coordinates_t<T> {
   public:
     using value_type = coordinates_t<T>::value_type;
-    using frame_type = frame<value_type>;
-    using frame_ptr_type = frame_type::ptr_type;
 
   private:
-    frame_ptr_type m_frame = frame_type::standard;
+    frame_ptr m_frame = frame::standard;
 
   public:
 
-    // - Constructors
+    // * Constructors
 
-    // * origin of given frame (defaults to standard frame)
+    // origin of given frame (defaults to standard frame)
 
     point_t(
-      const frame_ptr_type frm = frame_type::standard
+      const frame_ptr frm = frame::standard
     ) :
-      coordinates_t<value_type>(value_type(0), value_type(0), value_type(0)),
+      coordinates_t<value_type>{value_type(0), value_type(0), value_type(0)},
       m_frame(frm)
     {}
 
-    // * construct a point from a coordinates object and frame (explicit)
+    // construct a point from a coordinates object and frame
 
     point_t(
       const coordinates_t<value_type>& coordinates,
-      const frame_ptr_type frm
+      const frame_ptr frm = frame::standard
     ) :
       coordinates_t<value_type>(coordinates),
       m_frame(frm)
     {}
 
-    // * construct a point with given coordinates and frame
+    // construct a point with given coordinates and frame
 
     point_t(
       const value_type& x,
       const value_type& y,
       const value_type& z,
-      const frame_ptr_type frm = frame_type::standard
+      const frame_ptr frm = frame::standard
     ) :
       point_t({x, y, z}, frm)
     {}
 
-    // * copy constructor from point with compatible value type
+    // copy constructor from point with compatible value type
 
     template <std::convertible_to<value_type> U>
     point_t(
@@ -77,114 +75,105 @@ namespace util {
     {}
 
 
-    // - Frame manipulation
+    // * Frame manipulation
 
-    // * access the frame
+    // access the frame
 
     const auto& get_frame() const
     {return m_frame;}
 
-    // * change the frame
+    // change the frame
 
-    point_t& set_frame(
-      const frame_ptr_type& frame
-    )
+    point_t& set_frame(const frame_ptr& frm)
     {
-      if (frame != get_frame()) {
+      if (frm != get_frame()) {
         // copy coordinates of this point but rotated to coincide with the std frame
         coordinates_t<value_type> new_coordinates = get_frame()->from() * (*this);
+
         // move origin of the coordinates to the new frame
-        new_coordinates.x() += get_frame()->origin()[0] - frame->origin()[0];
-        new_coordinates.y() += get_frame()->origin()[1] - frame->origin()[1];
-        new_coordinates.z() += get_frame()->origin()[2] - frame->origin()[2];
+        new_coordinates.x() += get_frame()->origin()[0] - frm->origin()[0];
+        new_coordinates.y() += get_frame()->origin()[1] - frm->origin()[1];
+        new_coordinates.z() += get_frame()->origin()[2] - frm->origin()[2];
+
         // rotate coordinates to the new frame
-        new_coordinates = frame->to() * new_coordinates;
+        new_coordinates = frm->to() * new_coordinates;
+
         // set new frame and coordinates of this point
         this->x() = new_coordinates.x();
         this->y() = new_coordinates.y();
         this->z() = new_coordinates.z();
-        m_frame = frame;
+
+        // copy new frame to this object
+        m_frame = frm;
       }
       return *this;
     }
 
-    // * create a copy of this point in a different frame
+    // create a copy of this point in a different frame
 
-    point_t on_frame(
-      const frame_ptr_type& frame
-    ) const
+    point_t on_frame(const frame_ptr& frm) const
     {
       point_t other = *this;
-      other.set_frame(frame);
-      return other;
+      return other.set_frame(frm);
     }
 
-    // * create a copy of the point on the frame of another object that has a frame
+    // create a copy of the point on the frame of another object that has a frame
 
-    auto on_frame_of(const auto& f) 
-    -> point_t<typename std::remove_cvref_t<decltype(f)>::value_type>
+    point_t on_frame_of(const auto& f) const
     {return on_frame(f.get_frame());}
 
-    // - Operations
+    // * Operations
 
-    // * distance to another point
-
-    template <std::common_with<value_type> U>
-    value_type distance(const point_t<U>& p) const
-    {return (p - *this).norm();}
-
-    // * point-point subtraction produces a vector
+    // distance to another point
 
     template <std::common_with<value_type> U>
-    auto operator-(
-      const point_t<U>& p
-    ) const
+    auto distance(const point_t<U>& p) const
+    {return (*this - p).norm();}
+
+    // point-point subtraction produces a vector
+
+    template <std::common_with<value_type> U>
+    auto operator-(const point_t<U>& p) const
     {
-      const auto other = p.on_frame(get_frame());
+      const auto other = p.on_frame_of(*this);
       return vector_t<decltype(value_type{} - U{})>{
         this->x() - other.x(),
         this->y() - other.y(),
         this->z() - other.z(),
-        get_frame()
+        this->get_frame()
       };
     }
 
-    // * point-vector sum/subtraction produces a point
+    // point-vector sum/subtraction produces a point
 
     template <std::common_with<value_type> U>
-    auto operator+(
-      const vector_t<U>& v
-    ) const
+    auto operator+(const vector_t<U>& v) const
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       return point_t<decltype(value_type{} + U{})>{
         this->x() + other.x(),
         this->y() + other.y(),
         this->z() + other.z(),
-        get_frame()
+        this->get_frame()
       };
     }
 
     template <std::common_with<value_type> U>
-    auto operator-(
-      const vector_t<U>& v
-    ) const
+    auto operator-(const vector_t<U>& v) const
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       return point_t<decltype(value_type{} - U{})>{
         this->x() - other.x(),
         this->y() - other.y(),
         this->z() - other.z(),
-        get_frame()
+        this->get_frame()
       };
     }
 
     template <std::convertible_to<value_type> U>
-    point_t& operator+=(
-      const vector_t<U>& v
-    )
+    point_t& operator+=(const vector_t<U>& v)
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       this->x() += other.x();
       this->y() += other.y();
       this->z() += other.z();
@@ -192,30 +181,20 @@ namespace util {
     }
 
     template <std::convertible_to<value_type> U>
-    point_t& operator-=(
-      const vector_t<U>& v
-    )
+    point_t& operator-=(const vector_t<U>& v)
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       this->x() -= other.x();
       this->y() -= other.y();
       this->z() -= other.z();
       return *this;
     }
 
-    // * point-point comparison
+    // point-point comparison
     
     template <std::common_with<value_type> U>
-    auto operator==(
-      const point_t<U>& p
-    ) const
-    {
-      const auto other = p.on_frame(get_frame());
-      return
-        other.x() == this->x() &&
-        other.y() == this->y() &&
-        other.z() == this->z();
-    }
+    auto operator==(const point_t<U>& p) const
+    {return this->m_data == p.on_frame_of(*this).m_data;}
 
   };
 

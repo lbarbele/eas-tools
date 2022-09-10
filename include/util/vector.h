@@ -21,53 +21,51 @@ namespace util {
   using vector_d = vector_t<double>;
   using vector_f = vector_t<float>;
 
-  // - implementation of the vector class
+  // - implementation of the vector_t class
 
   template <concepts::scalar T>
   class vector_t : public coordinates_t<T> {
   public:
     using value_type = coordinates_t<T>::value_type;
-    using frame_type = frame<value_type>;
-    using frame_ptr_type = frame_type::ptr_type;
 
   private:
-    frame_ptr_type m_frame;
+    frame_ptr m_frame;
   
   public:
 
-    // - Constructors
+    // * Constructors
 
-    // * zero vector on given frame (defaults to standard frame)
+    // zero vector on given frame (defaults to standard frame)
 
     vector_t(
-      const frame_ptr_type frm = frame_type::standard
+      const frame_ptr frm = frame::standard
     ) :
-      coordinates_t<value_type>(value_type(0), value_type(0), value_type(0)),
+      coordinates_t<value_type>{value_type(0), value_type(0), value_type(0)},
       m_frame(frm)
     {}
 
-    // * construct a vector from a coordinates object and frame (explicit)
+    // construct a vector from a coordinates object and frame
 
     vector_t(
       const coordinates_t<value_type>& coordinates,
-      const frame_ptr_type frm
+      const frame_ptr frm = frame::standard
     ) :
       coordinates_t<value_type>(coordinates),
       m_frame(frm)
     {}
 
-    // * construct a point with explicit coordinates and frame (defaults to standard frame)
+    // construct a vector with explicit coordinates and frame
 
     vector_t(
       const value_type& x,
       const value_type& y,
       const value_type& z,
-      const frame_ptr_type frm
+      const frame_ptr frm = frame::standard
     ) :
       vector_t({x, y, z}, frm)
     {}
 
-    // * copy constructor from vector with compatible value type
+    // copy constructor from vector with compatible value type
 
     template <std::convertible_to<value_type> U>
     vector_t(
@@ -76,72 +74,59 @@ namespace util {
       vector_t(other.x(), other.y(), other.z(), other.get_frame())
     {}
 
-    // - Vector normalization
+    // * Vector normalization
 
-    // * compute vector norm 
+    // compute vector norm 
 
     value_type norm() const
     {return this->get_r();}
 
-    // * normalize vector to given value and return it
+    // normalize vector to given value and return it
 
     vector_t& normalize(const value_type w)
-    {
-      (*this) *= w/norm();
-      return (*this);
-    }
+    {return (*this) *= w/norm();}
 
-    // * get copy of vector normalized to given value
+    // get copy of vector normalized to given value
 
-    vector_t get_normalized(const value_type w) const
-    {
-      auto other = *this;
-      other.normalize(w);
-      return other;
-    }
+    vector_t get_normalized(const concepts::scalar auto w) const
+    {return (*this) * (w/norm());}
 
-    // - Frame manipulation
+    // * Frame manipulation
 
-    // * access the frame
+    // access the frame
 
-    const frame_ptr_type& get_frame() const
+    const auto& get_frame() const
     {return m_frame;}
 
-    // * change frame
+    // change the frame
 
-    vector_t& set_frame(
-      const frame_ptr_type& frame
-    )
+    vector_t& set_frame(const frame_ptr& frm)
     {
-      if (frame != get_frame()) {
-        *this = frame->to() * get_frame()->from() * (*this);
-        m_frame = frame;
+      if (frm != get_frame()) {
+        *this = frm->to() * get_frame()->from() * (*this);
+        m_frame = frm;
       }
       return *this;
     }
 
-    // * create a copy of vector in a different frame
+    // create a copy of this vector in a different frame
 
-    vector_t on_frame(
-      const frame_ptr_type& frame
-    ) const
+    vector_t on_frame(const frame_ptr& frame) const
     {
       vector_t other = (*this);
-      other.set_frame(frame);
-      return other;
+      return other.set_frame(frame);
     }
 
-    // * create a copy of the point on the frame of another object that has a frame
+    // create a copy of the point on the frame of another object that has a frame
 
-    auto on_frame_of(const auto& f) 
-    -> vector_t<typename std::remove_cvref_t<decltype(f)>::value_type>
+    vector_t on_frame_of(const auto& f) const
     {return on_frame(f.get_frame());}
 
-    // - Frame-independent operations
+    // * Frame-independent operations
 
-    // * (assignment) multiplication by scalar
+    // (assignment) multiplication by scalar
 
-    vector_t& operator*=(const auto& x)
+    vector_t& operator*=(const concepts::scalar auto& x)
     requires std::convertible_to<decltype(value_type{}*x), value_type>
     {
       (*this)[0] *= x;
@@ -150,9 +135,9 @@ namespace util {
       return *this;
     }
 
-    // * (assignment) division by scalar
+    // (assignment) division by scalar
 
-    vector_t& operator/=(const auto& x)
+    vector_t& operator/=(const concepts::scalar auto& x)
     requires std::convertible_to<decltype(value_type{}/x), value_type>
     {
       (*this)[0] /= x;
@@ -161,33 +146,31 @@ namespace util {
       return *this;
     }
 
-    // * multiplication by scalar
+    // multiplication by scalar
 
     auto operator*(const concepts::scalar auto& x) const
     {
-      using ret_value_type = decltype(value_type{}*x);
-      return vector_t<ret_value_type> {
+      return vector_t<decltype(value_type{}*x)> {
         (*this)[0] * x,
         (*this)[1] * x,
         (*this)[2] * x,
-        frame<ret_value_type>::create(get_frame()->to(), frame<ret_value_type>::standard)
+        get_frame()
       };
     }
 
-    // * division by scalar
+    // division by scalar
 
     auto operator/(const concepts::scalar auto& x) const
     {
-      using ret_value_type = decltype(value_type{}/x);
-      return vector_t<ret_value_type> {
+      return vector_t<decltype(value_type{}/x)> {
         (*this)[0] / x,
         (*this)[1] / x,
         (*this)[2] / x,
-        frame<ret_value_type>::create(get_frame()->to(), frame<ret_value_type>::standard)
+        get_frame()
       };
     }
 
-    // * unary plus operator
+    // unary plus operator
 
     auto operator+() const
     {
@@ -199,11 +182,11 @@ namespace util {
       };
     }
 
-    // * unary minus operator
+    // unary minus operator
 
     auto operator-() const
     {
-      return vector_t<decltype(-T{})> {
+      return vector_t<decltype(-value_type{})> {
         -(*this)[0],
         -(*this)[1],
         -(*this)[2],
@@ -211,38 +194,38 @@ namespace util {
       };
     }
 
-    // - Frame-dependent operations
+    // * Frame-dependent operations
 
-    // * (assignment) sum with vector
+    // (assignment) sum with vector
 
     template <std::convertible_to<value_type> U>
     vector_t& operator+=(const vector_t<U>& v)
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       (*this)[0] += other[0];
       (*this)[1] += other[1];
       (*this)[2] += other[2];
       return (*this);
     }
 
-    // * (assignment) subtraction with vector
+    // (assignment) subtraction with vector
 
     template <std::convertible_to<value_type> U>
     vector_t& operator-=(const vector_t<U>& v)
     {
-      const auto& other = v.on_frame(get_frame());
+      const auto& other = v.on_frame_of(*this);
       (*this)[0] -= other[0];
       (*this)[1] -= other[1];
       (*this)[2] -= other[2];
       return (*this);
     }
 
-    // * vector sum
+    // vector sum
 
     template <std::common_with<value_type> U>
     auto operator+(const vector_t<U>& v) const
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       return vector_t<decltype(value_type{}+U{})> {
         (*this)[0] + other[0],
         (*this)[1] + other[1],
@@ -251,12 +234,12 @@ namespace util {
       };
     }
 
-    // * vector subtraction
+    // vector subtraction
 
     template <std::common_with<value_type> U>
     auto operator-(const vector_t<U>& v) const
     {
-      const auto other = v.on_frame(get_frame());
+      const auto other = v.on_frame_of(*this);
       return vector_t<decltype(value_type{}-U{})> {
         (*this)[0] - other[0],
         (*this)[1] - other[1],
@@ -265,65 +248,51 @@ namespace util {
       };
     }
 
-    // * dot product
+    // dot product
 
-    template <class U>
+    template <concepts::scalar U>
     auto operator*(const vector_t<U>& v) const
     {
       const auto other = v.on_frame(get_frame());
-      return other[0]*(*this)[0] + other[1]*(*this)[1] + other[2]*(*this)[2];
+      return other.x()*this->x() + other.y()*this->y() + other.z()*this->z();
     }
 
-    // * cross product
+    // cross product
 
-    template <class U>
-    auto cross_product(
-      const vector_t<U>& v
-    ) const
+    template <concepts::scalar U>
+    auto cross_product(const vector_t<U>& v) const
     {
-      using ret_value_type = decltype(value_type{}*U{});
-      const auto other = v.on_frame(get_frame());
-      return vector_t<ret_value_type> {
-        (*this)[1]*other[2] - (*this)[2]*other[1],
-        (*this)[2]*other[0] - (*this)[0]*other[2],
-        (*this)[0]*other[1] - (*this)[1]*other[0],
-        frame<ret_value_type>::create(get_frame()->to(), frame<ret_value_type>::standard)
+      const auto other = v.on_frame_of(*this);
+      return vector_t<decltype(value_type{}*U{})> {
+        this->y()*other.z() - this->z()*other.y(),
+        this->z()*other.x() - this->x()*other.z(),
+        this->x()*other.y() - this->y()*other.x(),
+        get_frame()
       };
     }
 
-    // * vector-vector comparison
+    // vector-vector comparison
     
     template <std::common_with<value_type> U>
-    auto operator==(
-      const vector_t<U>& v
-    ) const
-    {
-      const auto other = v.on_frame(get_frame());
-      return
-        other.x() == this->x() &&
-        other.y() == this->y() &&
-        other.z() == this->z();
-    }
+    auto operator==(const vector_t<U>& v) const
+    {return this->m_data == v.on_frame_of(*this).m_data;}
   };
 
   // * scalar-vector product (from lhs)
 
-  template <class T>
+  template <concepts::scalar T>
   auto operator*(const concepts::scalar auto& x, const vector_t<T> v)
-  {return v * x;}
+  {return v * x; } // commutative!
 
   // * compute angle or cos(angle) between two vectors
 
-  template <class A, class B>
+  template <concepts::scalar A, concepts::scalar B>
   auto cos_angle(const vector_t<A>& a, const vector_t<B>& b)
   {return (a * b) / (a.norm() * b.norm());}
 
-  template <class A, class B>
+  template <concepts::scalar A, concepts::scalar B>
   auto angle(const vector_t<A>& a, const vector_t<B>& b)
-  {
-    auto cosine = cos_angle(a, b);
-    return math::acos(cosine);
-  }
+  {return math::acos(cos_angle(a, b));}
 }
 
 #endif
