@@ -1,9 +1,9 @@
 #ifndef _conex_extensions_interaction_h
 #define _conex_extensions_interaction_h
 
-#include <vector>
 #include <cstddef>
 #include <memory>
+#include <vector>
 
 #include <conex/extensions/projectile.h>
 #include <conex/extensions/particle.h>
@@ -12,13 +12,21 @@
 
 namespace conex::extensions {
 
+  // - forward declarations and aliases
+
+  // * the interaction class
   class interaction;
+
+  // * smart pointer to the interaction class
   using interaction_ptr = std::shared_ptr<interaction>;
 
-  class interaction {
+  // - implementation of the interaction class
 
-  // * data_t holds the data to read the interaction and seeds trees
-  public: struct data_t {
+  class interaction {
+  public:
+
+  // * data_t holds the data to read the interaction and seeds trees  
+    struct data_t {
       int idProj = 0;   // id of projectile (always 1120 if nucleus)
       int idTarg = 0;   // id of target
       int mult = 0;     // multiplicity of secondary particles
@@ -37,20 +45,16 @@ namespace conex::extensions {
 
   public:
 
-    // - Constructor and setters
+    // * Constructor and setters
 
-    // * build from tree data
-    interaction(
-      const data_t& tree_data
-    )
-    : m_data(tree_data)
-    {}
+    // build from tree data
+    interaction(const data_t& tree_data) : m_data(tree_data) {}
 
-    // * set interaction projectile
+    // set interaction projectile
     void set_projectile(const projectile::data_t& proj_data)
     {m_projectile = std::make_shared<projectile>(proj_data);}
 
-    // * add secondary particle to the list
+    // add secondary particle to the list
     particle_ptr add_particle(const particle::data_t& part_data)
     {
       // create a new particle object and retrieve a pointer to it
@@ -67,19 +71,20 @@ namespace conex::extensions {
       return new_particle;
     }
 
-    // - Direct access to tree data
+    // * direct access to raw tree data
+
     const data_t& data() const
     {return m_data;}
 
-    // - Access to conex frames
+    // * access to conex frames
 
-    const util::frame_ptr<double>& get_frame() const
+    const util::frame_ptr& get_frame() const
     {return get_projectile()->get_frame();}
 
-    const util::frame_ptr<double>& get_lab_frame() const
+    const util::frame_ptr& get_lab_frame() const
     {return get_projectile()->get_lab_frame();}
 
-    // - Formatted access to the tree data
+    // * formatted access to the tree data
 
     const int& get_multiplicity() const
     {return data().mult;}
@@ -90,14 +95,14 @@ namespace conex::extensions {
     const int& get_target_id() const
     {return data().idTarg;}
 
-    const double& get_cms_energy() const
-    {return data().eCMS;}
+    units::energy_t get_cms_energy() const
+    {return units::gigaelectron_volt_t<double>(data().eCMS);}
 
-    const double& get_lab_energy() const
-    {return data().eProd;}
+    units::energy_t get_lab_energy() const
+    {return units::gigaelectron_volt_t<double>(data().eProd);}
 
-    const double& get_proj_energy() const
-    {return data().eProj;}
+    units::energy_t get_proj_energy() const
+    {return units::gigaelectron_volt_t<double>(data().eProj);}
 
     const int& get_interaction_counter() const
     {return data().interactionCounter;}
@@ -105,7 +110,7 @@ namespace conex::extensions {
     const std::array<int, 3>& get_seeds() const
     {return data().seeds;}
 
-    // - Additional data
+    // * additional data
 
     const particle_ptr& get_leading() const
     {return m_leading;}
@@ -116,31 +121,27 @@ namespace conex::extensions {
     double get_inelasticity() const
     {return 1 - get_elasticity();}
 
-    // - Access to projectile/secondary particles
+    // * access to projectile/secondary particles
 
     const projectile_ptr& get_projectile() const
     {return m_projectile;}
 
-    const particle_ptr get_secondary(size_t pos) const
+    const particle_ptr get_secondary(std::size_t pos) const
     {return m_secondaries[pos];}
 
-    // - Particle iterators
+    // * particle iterators
 
-    // * standard iterators
     auto begin() {return m_secondaries.begin();}
     auto end() {return m_secondaries.end();}
     
-    // * const iterators
     auto begin() const {return m_secondaries.begin();}
     auto cbegin() const {return m_secondaries.cbegin();}
     auto end() const {return m_secondaries.end();}
     auto cend() const {return m_secondaries.cend();}
 
-    // * reverse iterators
     auto rbegin() {return m_secondaries.rbegin();}
     auto rend() {return m_secondaries.rend();}
 
-    // * const reverse iterators
     auto rbegin() const {return m_secondaries.rbegin();}
     auto crbegin() const {return m_secondaries.crbegin();}
     auto rend() const {return m_secondaries.rend();}

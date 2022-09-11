@@ -1,6 +1,10 @@
 #include <conex/extensions/interaction_tree.h>
+#include <util/vector.h>
+#include <util/units.h>
 
 // - Helper functions
+
+using namespace units::literals;
 
 namespace {
   bool
@@ -27,22 +31,21 @@ namespace {
     // * check for matching momentum
     // it is required that the angle between particle and projectile momentum
     // is below 10^-7 rad
-    const auto ppart_dir = part->get_momentum().normalize(1);
-    const auto pproj_dir = proj->get_momentum().normalize(1);
-    const double angle = std::acos(std::min(1.0, ppart_dir * pproj_dir));
-    if (angle >= 1e-7) {
+    const auto angle = util::angle(part->get_momentum(), proj->get_momentum());
+    if (angle >= 1e-7_rad) {
       return false;
     }
 
     // * check projectile position
     // it is required that, if particle is propagated up to the projectile interaction
-    // time, its distance to the interaction point is smaller than 0.1 mm
-    const double deltaTime = proj->get_time_s() - part->get_formation_time_s();
-    const auto particleVelocity = part->get_velocity().on_frame(util::frame<double>::conex_observer);
-    const auto particleDisplacement = deltaTime * particleVelocity;
-    const auto particleNewPos = part->get_formation_point() + particleDisplacement;
-    const auto posDif = particleNewPos - proj->get_position();
-    if (posDif.norm() > 1e-6) {
+    // time, its distance to the interaction point is smaller than 1 micrometer
+    const units::time_t deltaTime = proj->get_time() - part->get_formation_time();
+    const util::vector_t<units::length_t> posDif =
+      part->get_formation_point()  /* initial position */ +
+      deltaTime * part->get_velocity() /* displacement */ -
+      proj->get_position()    /* actual final position */ ;
+      
+    if (posDif.norm() > 1_um) {
       return false;
     }
 
@@ -55,10 +58,10 @@ namespace conex::extensions {
   interaction_tree_ptr
   interaction_tree::create(
     const event& evt,
-    const double energy_threshold
+    const units::energy_t energy_threshold
   )
   {
-    // copy the vector of interactions fro the event into a list
+    // copy the vector of interactions for the event into a list
     std::list<interaction_ptr> others(evt.begin(), evt.end());
 
     // get the other parameters
@@ -73,7 +76,7 @@ namespace conex::extensions {
   interaction_tree::create(
     const interaction_ptr& source,
     std::list<interaction_ptr>& others,
-    const double energy_threshold,
+    const units::energy_t energy_threshold,
     const int generation
   )
   {
@@ -90,11 +93,11 @@ namespace conex::extensions {
     for (const particle_ptr& current_particle : *source) {
 
       // dismiss particles with low kinectic energy (say, 10 MeV)
-      if (current_particle->get_energy() - current_particle->get_mass() < 0.01) {
+      if (current_particle->get_energy() - (current_particle->get_mass()*1_c*1_c) < 10_MeV) {
         continue;
       }
 
-      // do not check particles with energy below threshold, simply add to stack
+      // do not check particles with energy below threshold, simply add them to the stack.
       // also, if there are no other interactions to analyze, simply add the particle
       // to the stack
       if (current_particle->get_energy() < energy_threshold || others.empty()) {
@@ -124,18 +127,20 @@ namespace conex::extensions {
       // if there were no matches, add particle to the list of final products, then
       // continue with the next particle
       if (!matching_interaction) {
-        // notify if high energy particle is not electromagnetic and did not matched any interaction
-        const int id = current_particle->get_id();
-        if (id != 10/*gamma*/ && id != 110/*pi0*/ && std::fabs(id) != 12/*e+-*/) {
-          std::cerr << "particle above threshold with ID " << id << " did not match and will go to stack" << std::endl;
-        }
+        // notify if high energy particle did not match any interaction
+        std::cerr
+          << "particle above threshold with ID "
+          << current_particle->get_id()
+          << " carrying energy of "
+          << current_particle->get_energy()
+          << " did not match and will go to stack\n";
         tree->m_products.push_back(current_particle);
         continue;
       }
 
       // if there was more than one match, notify 
       if (matching_interaction_count > 1) {
-        std::cerr << matching_interaction_count << " candidate interactions found for particle. only one is expected!" << std::endl;
+        std::cerr << matching_interaction_count << " candidate interactions found for particle. only one is expected!\n";
       }
 
       // add the matching interaction as a sub-interaction_tree relative to this interaction tree

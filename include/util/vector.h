@@ -88,8 +88,8 @@ namespace util {
 
     // get copy of vector normalized to given value
 
-    vector_t get_normalized(const concepts::scalar auto w) const
-    {return (*this) * (w/norm());}
+    auto get_normalized(const concepts::scalar auto w) const
+    {return (*this / norm()) * w;}
 
     // * Frame manipulation
 

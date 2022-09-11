@@ -9,16 +9,25 @@
 #include <util/vector.h>
 #include <util/frame.h>
 #include <util/point.h>
+#include <util/units.h>
 
 namespace conex::extensions {
 
+  // - forward declarations and aliases
+
+  // * the particle class
   class particle;
+
+  // * smart pointer to the particle class
   using particle_ptr = std::shared_ptr<particle>;
 
-  class particle {
+  // - implementation of the particle class
 
-  // * data_t holds the data to read the particle tree
-  public: struct data_t {
+  class particle {
+  public:
+  
+    // * data_t holds the data to read the particle tree
+    struct data_t {
       double Px = 0;            // xsptl(1,i) ...... x-component of particle momentum 
       double Py = 0;            // xsptl(2,i) ...... y-component of particle momentum 
       double Pz = 0;            // xsptl(3,i) ...... z-component of particle momentum 
@@ -48,15 +57,15 @@ namespace conex::extensions {
   
   private:
     data_t m_data;
-    util::frame_ptr<double> m_frame;
+    util::frame_ptr m_frame;
     projectile_ptr m_precursor;
 
   public:
 
-    // - Constructor
+    // * constructor
     particle(
       const data_t& tree_data,
-      const util::frame_ptr<double>& lab_frame,
+      const util::frame_ptr& lab_frame,
       const std::shared_ptr<projectile> precursor
     )
     : m_data(tree_data),
@@ -64,46 +73,57 @@ namespace conex::extensions {
       m_precursor(precursor)
     {}
 
-    // - Direct access to tree data
+    // * direct access to raw tree data
     const data_t& data() const
     {return m_data;}
 
-    // - Access to the precursor projectile and other data
+    // * access to the precursor projectile and other data
+
     const projectile_ptr& get_precursor() const
     {return m_precursor;}
 
-    const util::frame_ptr<double>& get_frame() const
+    const util::frame_ptr& get_frame() const
     {return m_frame;}
 
-    util::point_d get_formation_point() const
+    util::point_t<units::length_t> get_formation_point() const
     {return get_precursor()->get_position();}
 
-    double get_formation_time_s() const
-    {return get_precursor()->get_time_s();}
+    units::time_t get_formation_time() const
+    {return get_precursor()->get_time();}
 
-    // - Formatted access to the particle data
+    // * formatted access to the particle data
 
-    // * get particle momentum in the lab frame [GeV]
-    util::vector_d get_momentum() const
-    {return{data().Px, data().Py, data().Pz, m_frame};}
+    // get particle momentum in the lab frame
+    util::vector_t<units::momentum_t> get_momentum() const
+    {
+      using namespace units::literals;
+      constexpr auto conv = 1_GeV/1_c;
+      return {data().Px*conv, data().Py*conv, data().Pz*conv, m_frame};
+    }
 
-    // * get particle energy [GeV]
-    const double& get_energy() const
-    {return data().Energy;}
+    // get particle energy
+    units::energy_t get_energy() const
+    {return units::gigaelectron_volt_t<double>(data().Energy);}
 
-    // * get particle mass [GeV]
-    const double& get_mass() const
-    {return data().mass;}
+    // get particle mass
+    units::mass_t get_mass() const
+    {
+      using namespace units::literals;
+      return data().mass * 1_GeV / (1_c * 1_c);
+    }
 
-    // * get particle velocity [m/s]
-    util::vector_d get_velocity() const
-    {return get_momentum() * (util::constants::c/get_energy());}
+    // get particle velocity
+    util::vector_t<units::speed_t> get_velocity() const
+    {
+      using namespace units::literals;
+      return get_momentum() * (1_c*1_c/get_energy());
+    }
 
-    // * get particle id (conex/nexus code)
+    // get particle id (conex/nexus code)
     const int& get_id() const
     {return data().id;}
 
-    // * interaction counter
+    // interaction counter
     const int& get_interaction_counter() const
     {return data().interactionCounter;}
 

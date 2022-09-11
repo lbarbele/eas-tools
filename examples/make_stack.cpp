@@ -12,6 +12,7 @@
 #include <conex/extensions/file.h>
 #include <conex/extensions/interaction_tree.h>
 #include <models/atmosphere.h>
+#include <util/math.h>
 #include <util/point.h>
 #include <util/vector.h>
 
@@ -19,14 +20,18 @@ int idToCorsika(const int idConex);
 
 int main(int argc, char** argv) {
 
-  // * aliases
+  using namespace units::literals;
+
+  // - aliases
 
   namespace cx = conex;
   namespace ce = conex::extensions;
 
   using secpar_t = std::array<double, 17>;
 
-  // * parse the command line
+  // - parse the command line
+
+  // * define the command line parameters
 
   TCLAP::CmdLine cmdLine("make_stack");
 
@@ -46,7 +51,7 @@ int main(int argc, char** argv) {
     false, 0.05, "threshold", cmdLine
   );
 
-  TCLAP::ValueArg<double> observationLevel("o", "obslev",
+  TCLAP::ValueArg<double> observationLevelInput("o", "obslev",
     "Altitude above sea level of the detector in CORSIKA.",
     false, 0.0, "obslev",  cmdLine
   );
@@ -68,6 +73,8 @@ int main(int argc, char** argv) {
     cmdLine, true
   );
 
+  // * actually parse the command line
+
   cmdLine.parse(argc, argv);
 
   if (thresholdRatio < 0) {
@@ -81,7 +88,9 @@ int main(int argc, char** argv) {
     printPrecision.getValue() = 5;
   }
 
-  // * open input files and check
+  const units::meter_t<double> observationLevel(observationLevelInput);
+
+  // -  open input files and check
 
   cx::file cxFile(conexFilePath.getValue());
   if (!cxFile.is_open()) {
@@ -95,7 +104,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // * check index and read the event
+  // -  check event index and read the event
 
   const unsigned int trueEvtIndex = eventNumber >= 0? eventNumber : eventNumber + cxPartFile.get_n_events();
 
@@ -104,140 +113,143 @@ int main(int argc, char** argv) {
     std::cerr << "file has " << cxPartFile.get_n_events() << " events" << std::endl;
     return 1;
   }
-
+  
   const cx::shower& shower = cxFile.get_shower(trueEvtIndex);
   const ce::event& evt = cxPartFile.get_event(trueEvtIndex, thresholdRatio, doConsistencyChecks);
 
-  // * get primary interaction data
+  // -  get primary interaction data
 
   ce::interaction_ptr primaryInteraction = evt.get_interaction(0);
   ce::projectile_ptr primaryParticle = primaryInteraction->get_projectile();
 
-  const double primaryEnergy = primaryParticle->get_energy();
-  const double energyThreshold = primaryEnergy * thresholdRatio;
-  const double t0 = primaryInteraction->get_projectile()->get_time_s();
+  const units::energy_t primaryEnergy = primaryParticle->get_energy();
+  const units::energy_t energyThreshold = primaryEnergy * double(thresholdRatio);
+  const units::time_t t0 = primaryParticle->get_time();
 
-  // * definition of the detector frame (if observation level != 0)
+  // - definition of the detector frame (considering the obs. level)
+
+  // * by default, the detector frame coincides with the standard frame
 
   util::frame_ptr detectorFrameCnx = util::frame::conex_observer;
 
-  double showerThetaObsDeg = shower.get_zenith_deg();
+  units::angle_t showerThetaObs = shower.get_zenith();
 
-  if (observationLevel > 0.1) {
+  // * if the observation level is not 0, a change of frame applies
+
+  if (observationLevel > 1_cm) {
 
     // shower angles and shower axis
-    const double showerTheta = shower.get_zenith_rad();
-    const double sinShowerTheta = std::sin(showerTheta);
-    const double cosShowerTheta = std::cos(showerTheta);
+    const units::angle_t showerTheta = shower.get_zenith();
+    const units::angle_t showerPhi = shower.get_azimuth();
+    const util::vector_d showerAxis = shower.get_axis();
 
-    const double showerPhi = shower.get_azimuth_rad();
-    const double sinShowerPhi = std::sin(showerPhi);
-    const double cosShowerPhi = std::cos(showerPhi);
-
-    const util::vector_d showerAxis(sinShowerTheta*cosShowerPhi, sinShowerTheta*sinShowerPhi, cosShowerTheta, util::frame::conex_observer);
+    const double sinShowerTheta = util::math::sin(showerTheta);
+    const double cosShowerTheta = util::math::cos(showerTheta);
 
     // auxiliar quantities
     const double aux_a = observationLevel / util::constants::earth_radius;
-    const double aux_b = std::sqrt((1 + aux_a + sinShowerTheta) * (1 + aux_a - sinShowerTheta)) - cosShowerTheta;
+    const double aux_b = util::math::sqrt((1 + aux_a + sinShowerTheta) * (1 + aux_a - sinShowerTheta)) - cosShowerTheta;
 
     // the zenithal angle changes due to the altitude of the observation level
-    const double sinThetaDet = sinShowerTheta / (1 + aux_a);
-    const double thetaDet = std::asin(sinThetaDet);
+    const units::angle_t thetaDet = util::math::asin(sinShowerTheta / (1 + aux_a));
 
     // the vertical at the detector is rotated with respect to the conex observer frame by the following angle
-    const double detectorRotAngle = showerTheta - thetaDet;
+    const units::angle_t detectorRotAngle = showerTheta - thetaDet;
 
     // build a rotation to go from the conex observer frame to the detector frame
-    const auto detectorRotation =
+    const util::square_matrix_d detectorRotationMatrix =
       (util::axis::z, showerPhi) *        // align x axis with projection of the shower axis at ground
       (util::axis::y, detectorRotAngle) * // rotate the z axis by an angle theta_obs_rot
       (util::axis::z, -showerPhi);        // recover original x and y axes
 
     // the detector is also displaced with respect to the conex observer origin
-    const util::point_d detectorPosition = util::point_d(util::frame::conex_observer) + 
+    const auto detectorPosition = util::point_t<units::length_t>(util::frame::conex_observer) +
       (aux_b * showerAxis - util::vector_d(0, 0, aux_a, util::frame::conex_observer)) *
       util::constants::earth_radius / (1 + aux_a);
 
     // create the detector frame in conex and define the observation angle
-    detectorFrameCnx = util::frame::create(detectorRotation, detectorPosition, util::frame::conex_observer);
+    detectorFrameCnx = util::frame::create(detectorRotationMatrix, detectorPosition, util::frame::conex_observer);
 
-    showerThetaObsDeg = thetaDet * 180 / util::constants::pi;
+    showerThetaObs = thetaDet;
   }
 
-  // * compute the interaction tree
+  // -  compute the interaction tree
 
   ce::interaction_tree_ptr tree = ce::interaction_tree::create(evt, energyThreshold);
 
-  // * the stack: a list that will hold secpar_t objects
+  // -  the stack is a list that will hold secpar_t objects
 
   std::list<secpar_t> stack;
 
-  // - consistency checks
-  double totalEnergySum = 0;
-  util::vector_d totalMomentumSum(0, 0, 0, util::frame::corsika_observer);
+  // - prepare the consistency checks
 
-  // * loop over the interaction tree to compute the CORSIKA stack
+  units::energy_t totalEnergySum(0);
+  util::vector_t<units::momentum_t> totalMomentumSum(util::frame::corsika_observer);
+
+  // -  loop over the interaction tree to compute the CORSIKA stack
+
   tree->apply_recursive([&](const ce::interaction_tree& tree){
 
     // get the projectile of the current interaction
     ce::interaction_ptr interaction = tree.get_interaction();
     ce::projectile_ptr proj = interaction->get_projectile();
 
-    // * particle's position in the detector frame
+    // * particle position in the detector frame
 
-    // ! const auto pos_cnx = proj->get_position().on_frame(util::frame::conex_observer);
-    const util::point_d pos_cnx = proj->get_position().on_frame(detectorFrameCnx);
+    const util::point_t<units::length_t> pos_cnx = proj->get_position().on_frame(detectorFrameCnx);
 
-    const double x_cnx = pos_cnx[0];
-    const double y_cnx = pos_cnx[1];
-    const double z_cnx = pos_cnx[2];
-    const double r_cnx = std::hypot(x_cnx, y_cnx);
+    const units::length_t x_cnx = pos_cnx[0];
+    const units::length_t y_cnx = pos_cnx[1];
+    const units::length_t z_cnx = pos_cnx[2];
+    const units::length_t r_cnx = util::math::hypot(x_cnx, y_cnx);
 
     // * definition of the conex particle frame and relevant angles
 
-    const double distance_to_earth_center = proj->get_height() + util::constants::earth_radius;
+    const units::length_t distance_to_earth_center = proj->get_height() + util::constants::earth_radius;
 
-    const double phi_cnx = r_cnx > 1e-10? std::atan2(y_cnx, x_cnx) : 0;
+    const units::angle_t phi_cnx = r_cnx > 1_nm? util::math::atan2<units::radian>(y_cnx, x_cnx) : 0_rad;
 
     const double sin_theta_ea = r_cnx / distance_to_earth_center;
     const double cos_theta_ea = (z_cnx + util::constants::earth_radius) / distance_to_earth_center;
-    const double theta_ea = std::asin(sin_theta_ea);
+    const units::angle_t theta_ea = util::math::asin(sin_theta_ea);
 
-    const auto particle_frame_rot_cnx =
-      (util::axis::x, util::constants::pi - theta_ea) *
-      (util::axis::z, phi_cnx - util::constants::pi/2.0);
+    const util::square_matrix_d particle_frame_rot_cnx =
+      (util::axis::x, 1_pi - theta_ea) *
+      (util::axis::z, phi_cnx - 0.5_pi);
     
-    const auto particle_frame_cnx = util::frame::create(particle_frame_rot_cnx, detectorFrameCnx);
+    const util::frame_ptr particle_frame_cnx = util::frame::create(particle_frame_rot_cnx, detectorFrameCnx);
 
     // * definition of the corsika particle frame
 
     // rotation matrix connecting CONEX particle frame to CORSIKA particle frame
-    const auto to_corsika = (util::axis::z, -phi_cnx) * (util::axis::y, util::constants::pi);
+    const util::square_matrix_d to_corsika =
+      (util::axis::z, -phi_cnx) *
+      (util::axis::y, 1_pi);
 
     // build the corsika particle frame based on the conex particle frame
-    // ! util::frame_ptr particle_frame_csk = util::frame::create(to_corsika, proj->get_frame());
-    util::frame_ptr particle_frame_csk = util::frame::create(to_corsika, particle_frame_cnx);
+    const util::frame_ptr particle_frame_csk = util::frame::create(to_corsika, particle_frame_cnx);
 
     // * compute parameters common to all secondary particles
+
     secpar_t secpar;
 
     // true particle height [cm]
-    secpar[5] = 100 * proj->get_height();
+    secpar[5] = proj->get_height() / 1_cm;
 
     // accumulated time since the first interaction [s]
-    secpar[6] = proj->get_time_s() - t0;
+    secpar[6] = (proj->get_time() - t0) / 1_s;
 
     // particle position in CORSIKA curved coordinates (following earth's curvature) [cm]
-    const double phi_csk = phi_cnx - util::constants::pi / 2.0;
-    const double r_csk = 100 * util::constants::earth_radius * theta_ea;
-    secpar[7] = std::cos(phi_csk) * r_csk;
-    secpar[8] = std::sin(phi_csk) * r_csk;
+    const units::angle_t phi_csk = phi_cnx - 0.5_pi;
+    const units::length_t r_csk = util::constants::earth_radius * (theta_ea / 1_rad);
+    secpar[7] = util::math::cos(phi_csk) * r_csk / 1_cm;
+    secpar[8] = util::math::sin(phi_csk) * r_csk / 1_cm;
 
     // particle generation
     secpar[9] = 1 + tree.get_generation();
 
     // level of the last interaction [cm]
-    secpar[10] = 100 * proj->get_height();
+    secpar[10] = proj->get_height() / 1_cm;
 
     // polarization (not used)
     secpar[11] = 0;
@@ -247,25 +259,29 @@ int main(int argc, char** argv) {
     secpar[13] = proj->get_weight();
 
     // apparent height (above sea level) [cm]
-    secpar[14] = 100 * z_cnx;
+    secpar[14] = z_cnx / 1_cm;
 
     // cosine of apparent polar angle of particle
-    const double z_above_obs = z_cnx - observationLevel;
-    secpar[15] = z_above_obs / std::hypot(x_cnx, y_cnx, z_above_obs);
+    const units::length_t z_above_obs = z_cnx - observationLevel;
+    secpar[15] = z_above_obs / util::math::hypot(x_cnx, y_cnx, z_above_obs);
 
     // cosine of polar angle measured at earth center
     secpar[16] = cos_theta_ea;
 
     // * loop over final products of the current interaction
+
     for (const ce::particle_ptr& particle : tree.get_final_products()) {
+
       // particle ID
       secpar[0] = idToCorsika(particle->get_id());
 
-      // gamma factor (or energy, if particle is massless)
-      secpar[1] = particle->get_energy() / (particle->get_mass() > 0? particle->get_mass() : 1);
+      // gamma factor (or energy in GeV, if particle is massless)
+      secpar[1] = particle->get_mass() > units::mass_t(0)?
+        particle->get_energy() / (particle->get_mass() * 1_c * 1_c) :
+        particle->get_energy() / 1_GeV;
 
       // particle direction in CORSIKA particle frame
-      const auto direction_corsika = particle->get_momentum().on_frame(particle_frame_csk).normalize(1);
+      const util::vector_d direction_corsika = particle->get_momentum().on_frame(particle_frame_csk).get_normalized(1);
       secpar[2]  = -direction_corsika[2];
       secpar[3]  = direction_corsika[0];
       secpar[4]  = direction_corsika[1];
@@ -273,34 +289,23 @@ int main(int argc, char** argv) {
       // add to the stack
       stack.push_back(secpar);
 
-      // - consistency checks
+      // * consistency checks
+
       totalEnergySum += particle->get_energy();
       totalMomentumSum += particle->get_momentum();
     }
   });
 
-  // * get shower parameters
-  const double showerThetaRad = shower.get_zenith_rad();
-  const double showerPhiRad = shower.get_azimuth_rad() + util::constants::pi/2.;
+  // - perform the consistency checks
 
-  // - consistency checks
-  const double edev = totalEnergySum/primaryEnergy - 1;
-
-  if (std::fabs(edev) > 1e-5) {
+  if (std::fabs(totalEnergySum/primaryEnergy - 1) > 1e-5) {
     std::cerr << "bad energy sum" << std::endl;
     return 1;
   }
 
-  const auto pprim = primaryParticle->get_momentum().norm() * util::vector_d(
-    std::sin(showerThetaRad) * std::cos(showerPhiRad),
-    std::sin(showerThetaRad) * std::sin(showerPhiRad),
-    -std::cos(showerThetaRad),
-    util::frame::corsika_observer
-  );
+  const util::vector_t<units::momentum_t> pprim = primaryParticle->get_momentum();
 
-  const double pdev = (totalMomentumSum-pprim).norm()/pprim.norm();
-
-  if (pdev > 1e-5) {
+  if ((totalMomentumSum - pprim).norm()/pprim.norm() > 1e-5) {
     std::cerr << "bad momentum sum" << std::endl;
     return 1;
   }
@@ -312,10 +317,10 @@ int main(int argc, char** argv) {
   // * print the stackin file header
   std::cout
     << std::setw(fieldWidth) << stack.size() << ' '
-    << std::setw(fieldWidth) << shower.get_energy_gev() << ' '
-    << std::setw(fieldWidth) << 100 * primaryParticle->get_height() << ' '
-    << std::setw(fieldWidth) << showerThetaObsDeg << ' '
-    << std::setw(fieldWidth) << std::fmod(shower.get_azimuth_deg() + 90, 360) << '\n';
+    << std::setw(fieldWidth) << shower.get_energy()/1_GeV << ' '
+    << std::setw(fieldWidth) << primaryParticle->get_height()/1_cm << ' '
+    << std::setw(fieldWidth) << showerThetaObs/1_deg << ' '
+    << std::setw(fieldWidth) << util::math::fmod(shower.get_azimuth() + 90_deg, 360_deg)/1_deg << '\n';
 
   // * print the stack
   for (const auto& secpar : stack) {

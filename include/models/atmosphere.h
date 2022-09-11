@@ -147,177 +147,152 @@ namespace models::atmosphere {
       const util::point_t<units::length_t>& p
     ) const
     {
-      static const util::point_t<units::length_t> c(0_m, 0_m, -util::constants::earth_radius * 1_m, util::frame<units::length_t>::standard);
-      const units::length_t height((p-c).norm() - (util::constants::earth_radius * 1_m));
+      static const util::point_t<units::length_t> c(0_m, 0_m, -util::constants::earth_radius, util::frame::standard);
+      const units::length_t height((p-c).norm() - util::constants::earth_radius);
       return get_density(height);
     }
 
-    // // * traversed mass between two points
-    // units::depth_t
-    // get_traversed_mass(
-    //   const util::point_t<units::length_t>& ai,
-    //   const util::point_t<units::length_t>& bi
-    // ) const
-    // {
-    //   // alias to earth radius
-    //   static const double rea = util::constants::earth_radius;
+    // * traversed mass between two points
+    units::depth_t
+    get_traversed_mass(
+      const util::point_t<units::length_t>& a,
+      const util::point_t<units::length_t>& b
+    ) const
+    {
+      // point at earth's center
+      static const util::point_t<units::length_t> earth_center(0_m, 0_m, -util::constants::earth_radius, util::frame::standard);
 
-    //   // point at earth's center
-    //   static const util::point_d c(0, 0, -rea, util::frame<double>::standard);
+      // separation vector
+      const util::vector_t<units::length_t> separation = b - a;
 
-    //   // convert input to double (in meters!!!)
-    //   const util::point_d a(ai.x().get_value(), ai.y().get_value(), ai.z().get_value(), ai.get_frame());
-    //   const util::point_d b(bi.x().get_value(), bi.y().get_value(), bi.z().get_value(), bi.get_frame());
+      // position vectors with origin at the earth's center
+      const auto ra = a - earth_center;
+      const auto rb = b - earth_center;
 
-    //   // separation vector
-    //   const util::vector_d separation = b - a;
+      // check if integration path goes upwards
+      const double cos_alpha = util::cos_angle(ra, separation);
+      double sin_alpha = std::sqrt((1+cos_alpha)*(1-cos_alpha));
 
-    //   // position vectors with origin at the earth's center
-    //   const auto ra = a - c;
-    //   const auto rb = b - c;
+      if (cos_alpha < 0) {
+        // integration goes downwards, so check if there is a change of sign in cos_theta along the trajectory
+        const units::length_t s_cross = - ra.norm() * cos_alpha;
 
-    //   // check if integration path goes upwards
-    //   double cos_alpha = ra.get_normalized(1) * separation.get_normalized(1);
-    //   double sin_alpha = std::sqrt((1+cos_alpha)*(1-cos_alpha));
+        if (separation.norm() > s_cross) {
+          // signal of cos_theta changes, so we split the integral in two parts
+          const double f = s_cross / separation.norm();
+          const util::point_t<units::length_t> cross_point_a = a + (1 - 1e-10) * f * separation;
+          const util::point_t<units::length_t> cross_point_b = a + (1 + 1e-10) * f * separation;
+          return get_traversed_mass(cross_point_a, a) + get_traversed_mass(cross_point_b, b);
+        } else {
+          // no change of signal in cos_theta, simply invert points
+          return get_traversed_mass(b, a);
+        }
+      }
 
-    //   if (cos_alpha < 0) {
-    //     // integration goes downwards, so check if there is a change of sign in cos_theta along the trajectory
-    //     const double s_cross = - ra.norm() * cos_alpha;
+      // compute initial/final heights (in meters !)
+      const units::length_t ha = ra.norm() - util::constants::earth_radius;
+      const units::length_t hb = rb.norm() - util::constants::earth_radius;
 
-    //     if (separation.norm() > s_cross) {
-    //       // signal of cos_theta changes, so we split the integral in two parts
-    //       const double f = s_cross / separation.norm();
-    //       const auto cpt_a = a + (1 - 1e-10) * f * separation;
-    //       const auto cpt_b = a + (1 + 1e-10) * f * separation;
-    //       const util::point_t<units::length_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
-    //       const util::point_t<units::length_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
-    //       return get_traversed_mass(cross_point_a, ai) + get_traversed_mass(cross_point_b, bi);
-    //     } else {
-    //       // no change of signal in cos_theta, simply invert points
-    //       return get_traversed_mass(bi, ai);
-    //     }
-    //   }
+      // get layer indices
+      const auto ia = get_layer_index(ha);
+      const auto ib = get_layer_index(hb);
 
-    //   // compute initial/final heights (in meters !)
-    //   const units::length_t ha(ra.norm() - rea);
-    //   const units::length_t hb(rb.norm() - rea);
+      if (ia != ib) {
+        // if integration path crosses layer boundaries, split the integral
+        const units::length_t h_cross = m_height_boundaries[ia+1];
+        const units::length_t r_cross = h_cross + util::constants::earth_radius;
+        const units::length_t s_cross = util::math::sqrt((r_cross + ra.norm()*sin_alpha)*(r_cross - ra.norm()*sin_alpha)) - ra.norm()*cos_alpha;
+        const double f = s_cross / separation.norm();
+        const auto cross_point_a = a + (1 - 1e-10) * f * separation;
+        const auto cross_point_b = a + (1 + 1e-10) * f * separation;
+        return get_traversed_mass(a, cross_point_a) + get_traversed_mass(cross_point_b, b);
+      }
 
-    //   // get layer indices
-    //   const auto ia = get_layer_index(ha);
-    //   const auto ib = get_layer_index(hb);
+      // here, we have a trajectory that goes upwards and does not cross any layer boundary
+      const auto ilayer = ia;
 
-    //   if (ia != ib) {
-    //     // if integration path crosses layer boundaries, split the integral
-    //     const double h_cross = m_height_boundaries[ia+1] / 1_m;
-    //     const double r_cross = h_cross + rea;
-    //     const double s_cross = std::sqrt((r_cross + ra.norm()*sin_alpha)*(r_cross - ra.norm()*sin_alpha)) - ra.norm()*cos_alpha;
-    //     const double f = s_cross / separation.norm();
-    //     const auto cpt_a = a + (1 - 1e-10) * f * separation;
-    //     const auto cpt_b = a + (1 + 1e-10) * f * separation;
-    //     const util::point_t<units::length_t> cross_point_a(cpt_a.x() * 1_m, cpt_a.y() * 1_m, cpt_a.z() * 1_m, cpt_a.get_frame());
-    //     const util::point_t<units::length_t> cross_point_b(cpt_b.x() * 1_m, cpt_b.y() * 1_m, cpt_b.z() * 1_m, cpt_b.get_frame());
-    //     return get_traversed_mass(ai, cross_point_a) + get_traversed_mass(cross_point_b, bi);
-    //   }
+      if (ilayer < m_nlayers-1) {
+        const double lower = std::exp(-hb/m_c[ilayer]);
+        const double upper = std::exp(-ha/m_c[ilayer]);
+        const double tolerance = 1e-8;
 
-    //   // here, we have a trajectory that goes upwards and does not cross any layer boundary
-    //   const auto ilayer = ia;
+        const units::length_t catm = m_c[ilayer];
+        const units::length_t r0 = ra.cross_product(rb).norm() / separation.norm();
 
-    //   if (ilayer < m_nlayers-1) {
-    //     const double lower = std::exp(-hb/m_c[ilayer]);
-    //     const double upper = std::exp(-ha/m_c[ilayer]);
-    //     const double tolerance = 1e-8;
+        const auto integrand = [=](const double u){
+          const units::length_t r = util::constants::earth_radius - std::log(u) * catm;
+          const double x = r0/r;
+          return 1.0/std::sqrt((1+x)*(1-x));
+        };
 
-    //     const double catm = (m_c[ilayer] / 1_m);
-    //     const double r0 = ra.cross_product(rb).norm() / separation.norm();
+        return m_b[ilayer] * util::math::romberg_integral(lower, upper, tolerance, integrand);
+      } else {
+        return separation.norm() * m_b[ilayer] / m_c[ilayer];
+      }
+    }
 
-    //     const auto integrand = [=](const double u){
-    //       const double r = rea - std::log(u) * catm;
-    //       const double x = r0/r;
-    //       return 1.0/std::sqrt((1+x)*(1-x));
-    //     };
-
-    //     double integral = util::math::romberg_integral(lower, upper, tolerance, integrand);
-    //     integral *= m_b[ilayer] / 1_gcm2;
+    // * traversed length
+    template <util::concepts::scalar U>
+    util::point_t<units::length_t>
+    propagate(
+      const util::point_t<units::length_t>& initial_point,
+      const util::vector_t<U>& direction_input,
+      const units::depth_t traversed_mass
+    ) const
+    {
+      // * constants, input conversions, and helpers
       
-    //     return units::depth_t(integral);
-    //   } else {
-    //     return units::depth_t(separation.norm() * 100 * (get_density(ha) / 1_gcm3));
-    //   }
-    // }
+      // point at earth's center
+      static const util::point_t<units::length_t> earth_center(0_m, 0_m, -util::constants::earth_radius, util::frame::standard);
 
-    // // * traversed length
-    // util::point_t<units::length_t>
-    // propagate(
-    //   const util::point_t<units::length_t>& ai,
-    //   const util::vector_t<units::length_t>& d,
-    //   const units::depth_t traversed_mass
-    // ) const
-    // {
-    //   // - constants and helpers
-      
-    //   static const double rea = util::constants::earth_radius;
-    //   static const util::point_d earth_center(0, 0, -rea, util::frame<double>::standard);
+      // parameters for the newton method below
+      const units::length_t tolerance = 1_um; // 1 micrometer
+      const unsigned max_iterations = 100;
 
-    //   const double tolerance = 1e-6;
-    //   const unsigned max_iterations = 100;
+      // normalize the direction and make it dimensionless
+      const util::vector_d direction = direction_input.get_normalized(1);
 
-    //   const auto to_meter = [](const util::point_d p) {
-    //     return util::point_t<units::length_t>(p.x()*1_m, p.y()*1_m, p.z()*1_m, p.get_frame());
-    //   };
+      // * first approximation: assume X_slant = X_vertical / cos_theta
 
-    //   // - unit conversion
+      // position vector (with origin at Earth's center)
+      const util::vector_t<units::length_t> position_vector = initial_point - earth_center;
 
-    //   const auto initial_point = util::point_d(ai.x()/1_m, ai.y()/1_m, ai.z()/1_m, ai.get_frame());
-    //   const auto direction = util::vector_d(d.x()/1_m, d.y()/1_m, d.z()/1_m, d.get_frame()).get_normalized(1);
+      // inclination of the trajectory (measured downwards!)
+      const double cos_theta = -util::cos_angle(position_vector, direction);
 
-    //   // - first approximation: assume X_slant = X_vertical / cos_theta
+      // initial altitude and depth
+      const units::length_t starting_altitude = position_vector.norm() - util::constants::earth_radius;
+      const units::depth_t starting_vertical_depth = get_depth(starting_altitude);
 
-    //   // * position vector
-    //   const util::vector_d position_vector = initial_point - earth_center;
+      // approximation to ending depth/altitude
+      const units::depth_t ending_vertical_depth = starting_vertical_depth + traversed_mass * cos_theta;
+      const units::length_t ending_altitude = get_height(ending_vertical_depth);
 
-    //   // * inclination of the trajectory (measured downwards!)
-    //   const double cos_theta = -util::cos_angle(position_vector, direction);
+      // approximated displacement
+      units::length_t displacement = (starting_altitude - ending_altitude) / cos_theta;
 
-    //   if (std::fabs(cos_theta) < 1e-5) {
-    //     std::cerr << "bad cos_theta" << std::endl;
-    //     throw;
-    //   }
+      // ending point
+      util::point_t<units::length_t> ending_point = initial_point + displacement * direction;
 
-    //   // * initial altitude and depth
-    //   const units::length_t starting_altitude = 1_m * (position_vector.norm() - rea);
-    //   const units::depth_t starting_vertical_depth = get_depth(starting_altitude);
+      // * improve the solution using newton's method
 
-    //   // * approximation to ending depth/altitude
-    //   const units::depth_t ending_vertical_depth = starting_vertical_depth + traversed_mass * cos_theta;
-    //   const units::length_t ending_altitude = get_height(ending_vertical_depth);
+      // loop up to max_iterations to find a valid solution
+      for (unsigned i = 0; i < max_iterations; ++i) {
+        // compute current step in the displacement (s), with change = (X(s) - X0) / X'(s), and X'(s) = rho(s)
+        const units::length_t change = (get_traversed_mass(initial_point, ending_point) - traversed_mass) / get_density(ending_point);
+        // compute new displacement
+        displacement -= change;
+        // compute new estimated ending point
+        ending_point = initial_point + displacement * direction;
+        // if change is below tolerance, we are done
+        if (util::math::abs(change) < tolerance) {
+          return ending_point;
+        }
+      }
 
-    //   // * approximated displacement
-    //   double displacement = ((starting_altitude - ending_altitude) / 1_m ) / cos_theta;
-
-    //   // * ending point
-    //   auto estimated_ending_point = initial_point + displacement * direction;
-
-    //   // - improve the solution using newton's method
-
-    //   // * loop up to max_iterations to find a valid solution
-    //   for (unsigned i = 0; i < max_iterations; ++i) {
-    //     // convert current estimate to a point carrying units
-    //     const auto bi = to_meter(estimated_ending_point);
-    //     // compute current step in the displacement (s), with change = (X(s) - X0) / X'(s), and X'(s) = rho(s)
-    //     const double change = 0.01 * ((get_traversed_mass(ai, bi)-traversed_mass)/1_gcm2) / (get_density(bi)/1_gcm3);
-    //     // compute new displacement
-    //     displacement -= change;
-    //     // compute new estimated ending point
-    //     estimated_ending_point = initial_point + displacement * direction;
-    //     // if change is below tolerance, we are done
-    //     if (std::fabs(change) < tolerance) {
-    //       return to_meter(estimated_ending_point);
-    //     }
-    //   }
-
-    //   std::cerr << "unable to reach desired precision" << std::endl;
-    //   throw;
-    // }
+      std::cerr << "unable to reach desired precision" << std::endl;
+      throw;
+    }
 
   };
 

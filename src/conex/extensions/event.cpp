@@ -6,6 +6,7 @@
 #include <conex/extensions/projectile.h>
 #include <conex/extensions/particle.h>
 
+#include <util/units.h>
 #include <util/vector.h>
 
 #include <iostream>
@@ -22,6 +23,8 @@ namespace conex::extensions {
     const bool check
   )
   {
+    using namespace units::literals;
+
     // * check trees
     if (!particle_tree || !projectile_tree || !interaction_tree || !seed_tree) {
       throw("conex::extensions::event::event(): bad tree pointers");
@@ -90,8 +93,8 @@ namespace conex::extensions {
 
     // * get energy of the first interaction and determine threshold energy
     interaction_tree->GetEntry(0);
-    const double eprim = interaction_data.eProj;
-    const double ethreshold = threshold*eprim;
+    const units::energy_t eprim = interaction_data.eProj * 1_GeV;
+    const units::energy_t ethreshold = threshold*eprim;
 
     // * put all data of the current event into memory
     long long ipart = 0;
@@ -105,7 +108,7 @@ namespace conex::extensions {
       seed_tree->GetEntry(i);
 
       // check if projectile energy is below defined fraction of the primary energy
-      if (interaction_data.eProj < ethreshold) {
+      if (interaction_data.eProj * 1_GeV < ethreshold) {
         // skip secondaries of this interaction
         ipart += interaction_data.mult;
         // skip the current interaction
@@ -141,9 +144,9 @@ namespace conex::extensions {
       const auto multiplicity = current_interaction->get_multiplicity();
       const long long ipart_end = ipart + multiplicity;
 
-      double esum = 0;
-      util::vector_d psum(0, 0, 0, current_interaction->get_frame());
-      
+      units::energy_t esum(0);
+      util::vector_t<units::momentum_t> psum(current_interaction->get_frame());
+
       while (ipart < ipart_end) {
         particle_tree->GetEntry(ipart++);
 
@@ -162,19 +165,19 @@ namespace conex::extensions {
       }
 
       // - consistency check: sum of secondary energies must match initial lab energy (eProd)
-      if (check && std::fabs(esum/interaction_data.eProd - 1) > 1e-7 /* fp_precision */) {
+      if (check && std::fabs(esum/current_interaction->get_lab_energy() - 1) > 1e-7 /* fp_precision */) {
         throw std::runtime_error("conex extensions energy mismatch");
       }
 
       // - consistency check: sum o secondary momenta must match projectile momentum
       if (check) {
-        const auto pproj = current_interaction->get_projectile()->get_momentum();
+        const util::vector_t<units::momentum_t> pproj = current_interaction->get_projectile()->get_momentum();
         const double pdev = (psum-pproj).norm() / pproj.norm();
         if (pdev > 1e-2 /* 1% */) {
           std::stringstream str;
           str << "conex extensions momentum mismatch" << std::endl;
-          str << "psum: " << psum << std::endl;
-          str << "pproj: " << pproj << std::endl;
+          str << "psum: " << psum.on_frame(util::frame::conex_observer) << std::endl;
+          str << "pproj: " << pproj.on_frame(util::frame::conex_observer) << std::endl;
           str << "dev: " << pdev << std::endl;
           throw std::runtime_error(str.str());
         }

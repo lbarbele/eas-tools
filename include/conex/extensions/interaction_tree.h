@@ -23,7 +23,7 @@ namespace conex::extensions {
     std::list<interaction_tree_ptr> m_secondary_interactions;
     interaction_tree_ptr m_precursor_interaction;
 
-    double m_energy_threshold;
+    units::energy_t m_energy_threshold;
     int m_generation;
 
     interaction_tree() {}
@@ -34,13 +34,13 @@ namespace conex::extensions {
 
     static interaction_tree_ptr create(
       const event& evt,
-      const double energy_threshold
+      const units::energy_t energy_threshold
     );
 
     static interaction_tree_ptr create(
       const interaction_ptr& source,
       std::list<interaction_ptr>& others,
-      const double energy_threshold,
+      const units::energy_t energy_threshold,
       const int generation
     );
 

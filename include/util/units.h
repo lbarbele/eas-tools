@@ -27,9 +27,15 @@ namespace units {
 
   // * aliases for scalar quantities
 
-  using depth_t = units::grams_per_squared_centimeter_t<double>;
-  using density_t = units::grams_per_cubed_centimeter_t<double>;
-  using length_t = units::meter_t<double>;
+  using depth_t = grams_per_squared_centimeter_t<double>;
+  using density_t = grams_per_cubed_centimeter_t<double>;
+  using length_t = meter_t<double>;
+  using energy_t = gigaelectron_volt_t<double>;
+  using momentum_t = quantity<make_unit<gigaelectron_volt, inverse<c>>, double>;
+  using time_t = second_t<double>;
+  using speed_t = quantity<make_unit<meter, inverse<second>>, double>;
+  using angle_t = radian_t<double>;
+  using mass_t = quantity<make_unit<gigaelectron_volt, inverse_squared<c>>, double>;
 }
 
 #endif
