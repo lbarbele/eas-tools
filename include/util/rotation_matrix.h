@@ -23,7 +23,7 @@ namespace util {
     // * build rotation matrix from single rotation around specified axis
     rotation_matrix(
       const axis ax,
-      const units::radian_t<double> angle
+      const units::angle_t angle
     ) :
       square_matrix_d<3>(0)
     {
@@ -48,13 +48,14 @@ namespace util {
   };
 
   // * shorthand notation to create a rotation matrix
+  template <class T>
   rotation_matrix
   operator,(
     const axis ax,
-    const concepts::quantity_compatible<units::radian_t<double>> auto& angle
+    const T& angle
   )
   {
-    using namespace units::literals;
+    static_assert(std::convertible_to<units::angle_t, T>);
     return rotation_matrix(ax, angle);
   }
 

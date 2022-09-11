@@ -165,7 +165,7 @@ namespace util {
       
       const inline static ptr_type standard = create();
       const inline static ptr_type corsika_observer = standard;
-      const inline static ptr_type conex_observer = create((axis::z, -constants::pi/2.0), standard);
+      const inline static ptr_type conex_observer = create((axis::z, units::pi_t<double>(0.5)), standard);
 
     };
 
