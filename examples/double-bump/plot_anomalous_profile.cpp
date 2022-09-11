@@ -10,6 +10,7 @@
 #include <conex/file.h>
 #include <corsika/longfile.h>
 #include <corsika/binaryfile.h>
+#include <util/units.h>
 
 int
 main(
@@ -17,6 +18,8 @@ main(
   char** argv
 )
 {
+  using namespace units::literals;
+
   if (argc < 3) {
     return 1;
   }
@@ -38,13 +41,33 @@ main(
 
   // Draw the conex profile and the corsika profile together
   {
-    auto cnxProfile = cnxFile.get_shower(cnxFile.get_n_showers() - 1).graph_dedx();
+    const auto& shower = cnxFile.get_shower(cnxFile.get_n_showers() - 1);
+
+    auto cnxProfile = shower.graph_dedx();
+
+    for (int i = 0; i < cnxProfile.GetN(); ++i) {
+      cnxProfile.GetX()[i] += 5;
+    }
 
     auto cskData = *cskLongFile.begin();
     auto cskDepths = cskData.get(corsika::profile::type::depth_dep);
-    auto cskdEdX = cskData.get(corsika::profile::type::dedx_sum);
+    auto cskdEdX = cskData.get(corsika::profile::type::em_ioniz);
+    cskdEdX += cskData.get(corsika::profile::type::em_cut);
+    cskdEdX += cskData.get(corsika::profile::type::mu_ioniz);
+    cskdEdX += cskData.get(corsika::profile::type::mu_cut);
+    cskdEdX += cskData.get(corsika::profile::type::hadr_ioniz);
+    cskdEdX += cskData.get(corsika::profile::type::hadr_cut);
+    // cskdEdX += cskData.get(corsika::profile::type::netrino_dep);
     cskdEdX /= cskData.get_step_size();
     TGraph cskProfile(cskData.size()-3, &cskDepths[0], &cskdEdX[0]);
+    // auto cskDepths = cskData.get(corsika::profile::type::depth);
+    // auto cskCharged = cskData.get(corsika::profile::type::mu_minus);
+    // cskCharged += cskData.get(corsika::profile::type::mu_plus);
+    // TGraph cskProfile(cskData.size()-3, &cskDepths[0], &cskCharged[0]);
+
+    for (int i = 0; i < cskProfile.GetN(); ++i) {
+      cskProfile.GetX()[i] += shower.get_first_interaction_depth() / 1_gcm2;
+    }
 
     cnxProfile.SetTitle("Longitudinal energy deposit profiles");
     cnxProfile.GetYaxis()->CenterTitle();
