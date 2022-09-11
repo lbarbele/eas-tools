@@ -119,6 +119,9 @@
 
 #include <conex/file.h>
 #include <util/math.h>
+#include <util/units.h>
+
+using namespace units::literals;
 
 TGraphErrors get_profile_cut(TGraph& g, bool doFluctuate = false);
 
@@ -582,10 +585,10 @@ four_parameter_fits(
       uspFit = *profile.Fit(&usp, "SQN");
 
       // copy CONEX data
-      lgE = shower.get_lge();
+      lgE = std::log10(shower.get_energy()/1_eV);
       XfirstIn = shower.get_first_interaction_inelasticty();
-      Xfirst = shower.get_first_interaction_depth();
-      Xmx = shower.get_xmx();
+      Xfirst = shower.get_first_interaction_depth()/1_gcm2;
+      Xmx = shower.get_xmx()/1_gcm2;
 
       // fill the tree
       tree.Fill();
