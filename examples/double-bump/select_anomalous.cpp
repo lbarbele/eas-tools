@@ -14,7 +14,7 @@
 
 #include <util/math.h>
 
-#include "fitters.h"
+// #include "fitters.h"
 #include "multipagecanvas.h"
 
 struct TH1DLogModel : public ROOT::RDF::TH1DModel {
@@ -346,95 +346,95 @@ main(
 
   // ? Plot anomalous profiles
 
-  auto profilePlotter = [&](
-    // the fitted profile
-    TGraph& dedx,
-    // limits of the fitted range
-    const double minDepth,
-    const double maxDepth,
-    // parameters of the double-gaisser-hillas fit
-    const double dbl_ecal,
-    const double dbl_w,
-    const double dbl_x0_1,
-    const double dbl_xmax_1,
-    const double dbl_lambda_1,
-    const double dbl_x0_2,
-    const double dbl_xmax_2,
-    const double dbl_lambda_2,
-    // parameters of the six-param gaisser-hillas fit
-    const double six_ymax,
-    const double six_x0,
-    const double six_xmax,
-    const double six_p1,
-    const double six_p2,
-    const double six_p3
-  ) {
-    dedx.SetPoint(dedx.GetN(), dedx.GetX()[dedx.GetN()-1], 0);
-    dedx.SetPoint(dedx.GetN(), 0, 0);
-    dedx.SetFillColorAlpha(kMagenta+4, 0.3);
-    dedx.SetLineColorAlpha(kBlack, 0.0);
-    dedx.Draw("af");
+  // auto profilePlotter = [&](
+  //   // the fitted profile
+  //   TGraph& dedx,
+  //   // limits of the fitted range
+  //   const double minDepth,
+  //   const double maxDepth,
+  //   // parameters of the double-gaisser-hillas fit
+  //   const double dbl_ecal,
+  //   const double dbl_w,
+  //   const double dbl_x0_1,
+  //   const double dbl_xmax_1,
+  //   const double dbl_lambda_1,
+  //   const double dbl_x0_2,
+  //   const double dbl_xmax_2,
+  //   const double dbl_lambda_2,
+  //   // parameters of the six-param gaisser-hillas fit
+  //   const double six_ymax,
+  //   const double six_x0,
+  //   const double six_xmax,
+  //   const double six_p1,
+  //   const double six_p2,
+  //   const double six_p3
+  // ) {
+  //   dedx.SetPoint(dedx.GetN(), dedx.GetX()[dedx.GetN()-1], 0);
+  //   dedx.SetPoint(dedx.GetN(), 0, 0);
+  //   dedx.SetFillColorAlpha(kMagenta+4, 0.3);
+  //   dedx.SetLineColorAlpha(kBlack, 0.0);
+  //   dedx.Draw("af");
 
-    GHDoubleFcn ghDouble;
-    ghDouble.SetParameters(dbl_ecal, dbl_w, dbl_x0_1, dbl_xmax_1, dbl_lambda_1, dbl_x0_2, dbl_xmax_2, dbl_lambda_2);
-    ghDouble.SetLineColorAlpha(kCyan+4, 0.7);
-    ghDouble.SetLineWidth(3);
-    ghDouble.SetLineStyle(kSolid);
-    ghDouble.SetRange(minDepth, maxDepth);
-    ghDouble.Draw("same l");
+  //   GHDoubleFcn ghDouble;
+  //   ghDouble.SetParameters(dbl_ecal, dbl_w, dbl_x0_1, dbl_xmax_1, dbl_lambda_1, dbl_x0_2, dbl_xmax_2, dbl_lambda_2);
+  //   ghDouble.SetLineColorAlpha(kCyan+4, 0.7);
+  //   ghDouble.SetLineWidth(3);
+  //   ghDouble.SetLineStyle(kSolid);
+  //   ghDouble.SetRange(minDepth, maxDepth);
+  //   ghDouble.Draw("same l");
 
-    GHSingleFcn ghFirstBump;
-    ghFirstBump.SetParameters(dbl_ecal*dbl_w, dbl_x0_1, dbl_xmax_1, dbl_lambda_1);
-    ghFirstBump.SetLineColorAlpha(kCyan+4, 0.7);
-    ghFirstBump.SetLineWidth(2);
-    ghFirstBump.SetLineStyle(kDashed);
-    ghFirstBump.SetRange(minDepth, maxDepth);
-    ghFirstBump.Draw("same l");
+  //   GHSingleFcn ghFirstBump;
+  //   ghFirstBump.SetParameters(dbl_ecal*dbl_w, dbl_x0_1, dbl_xmax_1, dbl_lambda_1);
+  //   ghFirstBump.SetLineColorAlpha(kCyan+4, 0.7);
+  //   ghFirstBump.SetLineWidth(2);
+  //   ghFirstBump.SetLineStyle(kDashed);
+  //   ghFirstBump.SetRange(minDepth, maxDepth);
+  //   ghFirstBump.Draw("same l");
 
-    GHSingleFcn ghSecondBump;
-    ghSecondBump.SetParameters(dbl_ecal*(1-dbl_w), dbl_x0_2, dbl_xmax_2, dbl_lambda_2);
-    ghSecondBump.SetLineColorAlpha(kCyan+4, 0.7);
-    ghSecondBump.SetLineWidth(2);
-    ghSecondBump.SetLineStyle(kDashed);
-    ghSecondBump.SetRange(minDepth, maxDepth);
-    ghSecondBump.Draw("same l");
+  //   GHSingleFcn ghSecondBump;
+  //   ghSecondBump.SetParameters(dbl_ecal*(1-dbl_w), dbl_x0_2, dbl_xmax_2, dbl_lambda_2);
+  //   ghSecondBump.SetLineColorAlpha(kCyan+4, 0.7);
+  //   ghSecondBump.SetLineWidth(2);
+  //   ghSecondBump.SetLineStyle(kDashed);
+  //   ghSecondBump.SetRange(minDepth, maxDepth);
+  //   ghSecondBump.Draw("same l");
 
-    GHSixParamFcn ghSixPar;
-    ghSixPar.SetParameters(six_ymax, six_x0, six_xmax, six_p1, six_p2, six_p3);
-    ghSixPar.SetLineColorAlpha(kOrange+10, 0.7);
-    ghSixPar.SetLineWidth(2);
-    ghSixPar.SetLineStyle(kSolid);
-    ghSixPar.SetRange(minDepth, maxDepth);
-    ghSixPar.Draw("same l");
+  //   GHSixParamFcn ghSixPar;
+  //   ghSixPar.SetParameters(six_ymax, six_x0, six_xmax, six_p1, six_p2, six_p3);
+  //   ghSixPar.SetLineColorAlpha(kOrange+10, 0.7);
+  //   ghSixPar.SetLineWidth(2);
+  //   ghSixPar.SetLineStyle(kSolid);
+  //   ghSixPar.SetRange(minDepth, maxDepth);
+  //   ghSixPar.Draw("same l");
 
-    canvas.Print();
-  };
+  //   canvas.Print();
+  // };
 
-  ROOT::RDF::ColumnNames_t profilePlotterColumns = {
-    // the fitted profile
-    "dedx",
-    // limits of the fitted range
-    "minDepth",
-    "maxDepth",
-    // parameters of the double-gaisser-hillas fit
-    "ghDoubleFit.ecal",
-    "ghDoubleFit.w",
-    "ghDoubleFit.x0_1",
-    "ghDoubleFit.xmax_1",
-    "ghDoubleFit.lambda_1",
-    "ghDoubleFit.x0_2",
-    "ghDoubleFit.xmax_2",
-    "ghDoubleFit.lambda_2",
-    // parameters of the six-param gaisser-hillas fit
-    "ghSixParFit.ymax",
-    "ghSixParFit.x0",
-    "ghSixParFit.xmax",
-    "ghSixParFit.p1",
-    "ghSixParFit.p2",
-    "ghSixParFit.p3"
-  };
+  // ROOT::RDF::ColumnNames_t profilePlotterColumns = {
+  //   // the fitted profile
+  //   "dedx",
+  //   // limits of the fitted range
+  //   "minDepth",
+  //   "maxDepth",
+  //   // parameters of the double-gaisser-hillas fit
+  //   "ghDoubleFit.ecal",
+  //   "ghDoubleFit.w",
+  //   "ghDoubleFit.x0_1",
+  //   "ghDoubleFit.xmax_1",
+  //   "ghDoubleFit.lambda_1",
+  //   "ghDoubleFit.x0_2",
+  //   "ghDoubleFit.xmax_2",
+  //   "ghDoubleFit.lambda_2",
+  //   // parameters of the six-param gaisser-hillas fit
+  //   "ghSixParFit.ymax",
+  //   "ghSixParFit.x0",
+  //   "ghSixParFit.xmax",
+  //   "ghSixParFit.p1",
+  //   "ghSixParFit.p2",
+  //   "ghSixParFit.p3"
+  // };
 
-  cutChi2Improve.Foreach(profilePlotter, profilePlotterColumns);
+  // cutChi2Improve.Foreach(profilePlotter, profilePlotterColumns);
 
   return 0;
 }
