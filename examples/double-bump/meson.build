@@ -1,5 +1,5 @@
 double_bump_progs = [
-  'fit_conex_anomalous',
+  'parametrize_conex_profiles',
   'select_anomalous',
   'plot_anomalous_profile'
 ]
