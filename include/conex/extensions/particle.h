@@ -96,9 +96,11 @@ namespace conex::extensions {
     // get particle momentum in the lab frame
     util::vector_t<units::momentum_t> get_momentum() const
     {
-      using namespace units::literals;
-      constexpr auto conv = 1_GeV/1_c;
-      return {data().Px*conv, data().Py*conv, data().Pz*conv, m_frame};
+      return {
+        units::gev_per_c_t<double>(data().Px),
+        units::gev_per_c_t<double>(data().Py),
+        units::gev_per_c_t<double>(data().Pz),
+        m_frame};
     }
 
     // get particle energy
@@ -107,10 +109,7 @@ namespace conex::extensions {
 
     // get particle mass
     units::mass_t get_mass() const
-    {
-      using namespace units::literals;
-      return data().mass * 1_GeV / (1_c * 1_c);
-    }
+    {return units::gev_per_c_squared_t<double>(data().mass);}
 
     // get particle velocity
     util::vector_t<units::speed_t> get_velocity() const

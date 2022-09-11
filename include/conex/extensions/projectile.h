@@ -137,10 +137,7 @@ namespace conex::extensions {
 
     // get projectile mass [GeV / c^2]
     units::mass_t get_mass() const
-    {
-      using namespace units::literals;
-      return data().mass * 1_GeV / (1_c * 1_c);
-    }
+    {return units::gev_per_c_squared_t<double>(data().mass);}
 
     // get projectile height [m]
     units::length_t get_height() const
