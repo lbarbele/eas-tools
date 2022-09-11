@@ -27,12 +27,12 @@ namespace conex::extensions {
 
   // * data_t holds the data to read the interaction and seeds trees  
     struct data_t {
-      int idProj = 0;   // id of projectile (always 1120 if nucleus)
-      int idTarg = 0;   // id of target
-      int mult = 0;     // multiplicity of secondary particles
-      double eProj = 0; // projectile energy in lab frame (energy/nucleon if nucleus)
-      double eCMS = 0;  // total energy in CMS
-      double eProd = 0; // total energy in lab frame (including target rest mass)
+      int idProj = 0;                           // id of projectile (always 1120 if nucleus)
+      int idTarg = 0;                           // id of target
+      int mult = 0;                             // multiplicity of secondary particles
+      units::gigaelectron_volt_t<double> eProj; // projectile energy in lab frame (energy/nucleon if nucleus)
+      units::gigaelectron_volt_t<double> eCMS;  // total energy in CMS
+      units::gigaelectron_volt_t<double> eProd; // total energy in lab frame (including target rest mass)
       int interactionCounter = 0;
       std::array<int, 3> seeds;
     };
@@ -96,13 +96,13 @@ namespace conex::extensions {
     {return data().idTarg;}
 
     units::energy_t get_cms_energy() const
-    {return units::gigaelectron_volt_t<double>(data().eCMS);}
+    {return data().eCMS;}
 
     units::energy_t get_lab_energy() const
-    {return units::gigaelectron_volt_t<double>(data().eProd);}
+    {return data().eProd;}
 
     units::energy_t get_proj_energy() const
-    {return units::gigaelectron_volt_t<double>(data().eProj);}
+    {return data().eProj;}
 
     const int& get_interaction_counter() const
     {return data().interactionCounter;}

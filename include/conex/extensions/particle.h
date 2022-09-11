@@ -28,21 +28,21 @@ namespace conex::extensions {
   
     // * data_t holds the data to read the particle tree
     struct data_t {
-      double Px = 0;            // xsptl(1,i) ...... x-component of particle momentum 
-      double Py = 0;            // xsptl(2,i) ...... y-component of particle momentum 
-      double Pz = 0;            // xsptl(3,i) ...... z-component of particle momentum 
-      double Energy = 0;        // xsptl(4,i) ...... particle energy 
-      double mass = 0;          // xsptl(5,i) ...... particle mass 
+      units::gev_per_c_t<double> Px;             // xsptl(1,i) ...... x-component of particle momentum 
+      units::gev_per_c_t<double> Py;             // xsptl(2,i) ...... y-component of particle momentum 
+      units::gev_per_c_t<double> Pz;             // xsptl(3,i) ...... z-component of particle momentum 
+      units::gigaelectron_volt_t<double> Energy; // xsptl(4,i) ...... particle energy 
+      units::gev_per_c_squared_t<double> mass;   // xsptl(5,i) ...... particle mass 
 
-      double x = 0;             // xsorptl(1,i) .... x-component of formation point
-      double y = 0;             // xsorptl(2,i) .... y-component of formation point
-      double z = 0;             // xsorptl(3,i) .... z-component of formation point
-      double time = 0;          // xsorptl(4,i) .... formation time
+      units::meter_t<double> x;     // xsorptl(1,i) .... x-component of formation point
+      units::meter_t<double> y;     // xsorptl(2,i) .... y-component of formation point
+      units::meter_t<double> z;     // xsorptl(3,i) .... z-component of formation point
+      units::second_t<double> time; // xsorptl(4,i) .... formation time
 
       int id = 0;               // idptlxs(i) ...... particle id
 
-      double t_formation = 0;   // xstivptl(1,i) ... formation time (always in the pp-cms!)
-      double t_destruction = 0; // xstivptl(2,i) ... destruction time (always in the pp-cms!)
+      units::second_t<double> t_formation;   // xstivptl(1,i) ... formation time (always in the pp-cms!)
+      units::second_t<double> t_destruction; // xstivptl(2,i) ... destruction time (always in the pp-cms!)
 
       int id_origin = 0;        // ityptlxs(i)  .... type of particles origin:
 
@@ -95,21 +95,15 @@ namespace conex::extensions {
 
     // get particle momentum in the lab frame
     util::vector_t<units::momentum_t> get_momentum() const
-    {
-      return {
-        units::gev_per_c_t<double>(data().Px),
-        units::gev_per_c_t<double>(data().Py),
-        units::gev_per_c_t<double>(data().Pz),
-        m_frame};
-    }
+    {return {data().Px, data().Py, data().Pz, m_frame};}
 
     // get particle energy
     units::energy_t get_energy() const
-    {return units::gigaelectron_volt_t<double>(data().Energy);}
+    {return data().Energy;}
 
     // get particle mass
     units::mass_t get_mass() const
-    {return units::gev_per_c_squared_t<double>(data().mass);}
+    {return data().mass;}
 
     // get particle velocity
     util::vector_t<units::speed_t> get_velocity() const

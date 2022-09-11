@@ -30,21 +30,21 @@ namespace conex::extensions {
   
     // * data_t holds the data to read the projectile tree
     struct data_t {
-      double Energy = 0;         // dptl(1)
-      double Px = 0;             // dptl(2)
-      double Py = 0;             // dptl(3)
-      double Pz = 0;             // dptl(4)
-      double mass = 0;           // dptl(5)
-      double x = 0;              // dptl(6)
-      double y = 0;              // dptl(7)
-      double height = 0;         // dptl(8)
-      double time = 0;           // dptl(9)
-      double id = 0;             // dptl(10)
-      double weight = 0;         // dptl(11)
-      double generation = 0;     // dptl(12)
-      double slantTraversed = 0; // dptl(13)
-      double xShower = 0;        // dptl(14)
-      double yShower = 0;        // dptl(15)
+      units::gigaelectron_volt_t<double> Energy;                    // dptl(1)
+      units::gev_per_c_t<double> Px;                                // dptl(2)
+      units::gev_per_c_t<double> Py;                                // dptl(3)
+      units::gev_per_c_t<double> Pz;                                // dptl(4)
+      units::gev_per_c_squared_t<double> mass;                      // dptl(5)
+      units::meter_t<double> x;                                     // dptl(6)
+      units::meter_t<double> y;                                     // dptl(7)
+      units::meter_t<double> height;                                // dptl(8)
+      units::second_t<double> time;                                 // dptl(9)
+      double id = 0;                                                // dptl(10)
+      double weight = 0;                                            // dptl(11)
+      double generation = 0;                                        // dptl(12)
+      units::grams_per_squared_centimeter_t<double> slantTraversed; // dptl(13)
+      units::meter_t<double> xShower;                               // dptl(14)
+      units::meter_t<double> yShower;                               // dptl(15)
       
       int interactionCounter = 0;
       
@@ -71,16 +71,12 @@ namespace conex::extensions {
     {
       using namespace units::literals;
  
-      const units::length_t x = units::meter_t<double>(data().x);
-      const units::length_t y = units::meter_t<double>(data().y);
-      const units::length_t r = util::math::hypot(x, y);
-      const units::length_t h = units::meter_t<double>(data().height);
-
-      const units::length_t dist_center = h + util::constants::earth_radius;
+      const units::length_t dist_center = data().height + util::constants::earth_radius;
+      const units::length_t r = util::math::hypot(data().x, data().y);
       const units::length_t z = util::math::sqrt((dist_center + r) * (dist_center - r)) - util::constants::earth_radius;
 
       // the position vector
-      m_position = util::point_t<units::length_t>(x, y, z, util::frame::conex_observer);
+      m_position = util::point_t<units::length_t>(data().x, data().y, z, util::frame::conex_observer);
 
       // the particle frame
       const units::angle_t phi_pos = util::math::atan2(data().y, data().x);
@@ -96,9 +92,9 @@ namespace conex::extensions {
 
       // momentum vector
       m_momentum.set_frame(m_frame);
-      m_momentum[0] = data().Px * 1_GeV/1_c;
-      m_momentum[1] = data().Py * 1_GeV/1_c;
-      m_momentum[2] = data().Pz * 1_GeV/1_c;
+      m_momentum[0] = data().Px;
+      m_momentum[1] = data().Py;
+      m_momentum[2] = data().Pz;
     }
 
     // * direct access to raw tree data
@@ -126,18 +122,15 @@ namespace conex::extensions {
 
     // get projectile time
     units::time_t get_time() const
-    {
-      using namespace units::literals;
-      return units::second_t<double>(data().time * 1_m/1_c);
-    }
+    {return data().time;}
 
     // get projectile energy
     units::energy_t get_energy() const
-    {return units::gigaelectron_volt_t<double>(data().Energy);}
+    {return data().Energy;}
 
     // get projectile mass [GeV / c^2]
     units::mass_t get_mass() const
-    {return units::gev_per_c_squared_t<double>(data().mass);}
+    {return data().mass;}
 
     // get projectile height [m]
     units::length_t get_height() const
@@ -157,7 +150,7 @@ namespace conex::extensions {
 
     // accumulated slant depth traversed by projectile [g/cm^2]
     units::depth_t get_slant_depth() const
-    {return units::grams_per_squared_centimeter_t<double>(data().slantTraversed);}
+    {return data().slantTraversed;}
 
     // slant distance to the impact point [m]
     units::length_t get_distance_to_impact() const
@@ -165,11 +158,11 @@ namespace conex::extensions {
 
     // projectile x position on the shower plane [m]
     units::length_t get_xshower() const
-    {return units::meter_t<double>(data().xShower);}
+    {return data().xShower;}
 
     // projectile y position on the shower plane [m]
     units::length_t get_yshower() const
-    {return units::meter_t<double>(data().yShower);}
+    {return data().yShower;}
 
     // interaction counter
     const int& get_interaction_counter() const

@@ -93,7 +93,7 @@ namespace conex::extensions {
 
     // * get energy of the first interaction and determine threshold energy
     interaction_tree->GetEntry(0);
-    const units::energy_t eprim = interaction_data.eProj * 1_GeV;
+    const units::energy_t eprim = interaction_data.eProj;
     const units::energy_t ethreshold = threshold*eprim;
 
     // * put all data of the current event into memory
@@ -108,7 +108,7 @@ namespace conex::extensions {
       seed_tree->GetEntry(i);
 
       // check if projectile energy is below defined fraction of the primary energy
-      if (interaction_data.eProj * 1_GeV < ethreshold) {
+      if (interaction_data.eProj < ethreshold) {
         // skip secondaries of this interaction
         ipart += interaction_data.mult;
         // skip the current interaction
