@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <istream>
 #include <iterator>
+#include <concepts>
 
 #include <TChain.h>
 
@@ -30,20 +31,14 @@ namespace conex {
 
     // constructor receiving a list of (convertible to) string arguments, each one pointing to a
     // single file. delegates construction to the main constructor
-    template <
-      class... Args,
-      class T = std::enable_if_t< 
-        std::conjunction_v<std::is_convertible<Args, std::string>...> ,
-        std::string
-      > 
-    >
+    template <std::convertible_to<std::string>... Args>
     file(Args... args)
-    : file(std::vector<T>{args...})
+    : file(std::vector<std::string>{std::string(args)...})
     {}
 
     // constructor receiving an input stream. reads the stream contents as a sequence of strings
     // into a vector and delegates to the main constructor
-    template <class CharT, class Traits = std::char_traits<CharT>>
+    template <class CharT, class Traits>
     file(std::basic_istream<CharT, Traits>& stream)
     : file(std::vector<std::string>{std::istream_iterator<std::string>(stream), std::istream_iterator<std::string>()})
     {}
