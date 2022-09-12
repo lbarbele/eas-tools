@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
     const units::angle_t detectorRotAngle = showerTheta - thetaDet;
 
     // build a rotation to go from the conex observer frame to the detector frame
-    const util::square_matrix_d detectorRotationMatrix =
+    const util::square_matrix_d<3> detectorRotationMatrix =
       (util::axis::z, showerPhi) *        // align x axis with projection of the shower axis at ground
       (util::axis::y, detectorRotAngle) * // rotate the z axis by an angle theta_obs_rot
       (util::axis::z, -showerPhi);        // recover original x and y axes
@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
     const double cos_theta_ea = (z_cnx + util::constants::earth_radius) / distance_to_earth_center;
     const units::angle_t theta_ea = util::math::asin(sin_theta_ea);
 
-    const util::square_matrix_d particle_frame_rot_cnx =
+    const util::square_matrix_d<3> particle_frame_rot_cnx =
       (util::axis::x, 1_pi - theta_ea) *
       (util::axis::z, phi_cnx - 0.5_pi);
     
@@ -226,7 +226,7 @@ int main(int argc, char** argv) {
     // * definition of the corsika particle frame
 
     // rotation matrix connecting CONEX particle frame to CORSIKA particle frame
-    const util::square_matrix_d to_corsika =
+    const util::square_matrix_d<3> to_corsika =
       (util::axis::z, -phi_cnx) *
       (util::axis::y, 1_pi);
 
