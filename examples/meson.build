@@ -1,13 +1,4 @@
-example_dirs = [
-  'double-bump',
-]
-
-foreach dir : example_dirs
-  subdir(dir)
-endforeach
-
 example_progs = [
-  'make_stack',
   'get_alpha',
   'parametrize_conex_profiles',
   'plot_conex_profiles',
