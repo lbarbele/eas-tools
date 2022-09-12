@@ -13,23 +13,23 @@ namespace conex {
     friend class file;
 
   private:
-    int    Seed1;
-    int    Particle;
-    double Alpha;
-    double lgEmin;
-    double lgEmax;
-    units::degree_t<double> zMin;
-    units::degree_t<double> zMax;
-    float  Version;
-    float  OutputVersion;
-    int    HEModel;
-    int    LEModel;
+    int                                Seed1;
+    int                                Particle;
+    double                             Alpha;
+    double                             lgEmin;
+    double                             lgEmax;
+    units::degree_t<double>            zMin;
+    units::degree_t<double>            zMax;
+    float                              Version;
+    float                              OutputVersion;
+    int                                HEModel;
+    int                                LEModel;
     units::gigaelectron_volt_t<float>  HiLowEgy;
     units::gigaelectron_volt_t<float>  hadCut;
     units::gigaelectron_volt_t<float>  emCut;
-    float  hadThr;
-    float  muThr;
-    float  emThr;
+    float                              hadThr;
+    float                              muThr;
+    float                              emThr;
     units::gigaelectron_volt_t<float>  haCut;
     units::gigaelectron_volt_t<float>  muCut;
     units::gigaelectron_volt_t<float>  elCut;

@@ -39,6 +39,14 @@ namespace units {
   units_set_quantity_alias(gev_per_c_squared);
   units_set_symbol(gev_per_c_squared, GeV c^-2);
 
+  // inverse grams per squared centimeter
+  using squared_centimeters_per_gram = make_unit<inverse<grams_per_squared_centimeter>>;
+  units_set_quantity_alias(squared_centimeters_per_gram);
+
+  // giga electron volt per (g cm^-2)
+  using gev_per_gcm = make_unit<gigaelectron_volt, inverse<grams_per_squared_centimeter>>;
+  units_set_quantity_alias(gev_per_gcm);
+
   // * aliases for scalar quantities
 
   using depth_t = grams_per_squared_centimeter_t<double>;
@@ -50,6 +58,7 @@ namespace units {
   using speed_t = quantity<make_unit<meter, inverse<second>>, double>;
   using angle_t = radian_t<double>;
   using mass_t = quantity<make_unit<gigaelectron_volt, inverse_squared<speed_of_light>>, double>;
+  using energy_deposit_t = gev_per_gcm_t<double>;
 }
 
 #endif

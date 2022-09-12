@@ -18,55 +18,56 @@ namespace conex {
   private:
     static const unsigned int max_entries = 5000;
     
-    float  lgE;
-    float  zenith;
-    float  azimuth;
-    int    Seed2;
-    int    Seed3;
-    float  Xfirst;
-    float  Hfirst;
-    float  XfirstIn;
-    double altitude;
-    float  X0;
-    float  Xmax;
-    float  Nmax;
-    float  p1;
-    float  p2;
-    float  p3;
-    float  chi2;
-    float  Xmx;
-    float  Nmx;
-    float  XmxdEdX;
-    float  dEdXmx;
-    float  cpuTime;
-    int    nX;
+    float                                         lgE;
+    units::degree_t<float>                        zenith;
+    units::degree_t<float>                        azimuth;
+    int                                           Seed2;
+    int                                           Seed3;
+    units::grams_per_squared_centimeter_t<float>  Xfirst;
+    units::meter_t<float>                         Hfirst;
+    float                                         XfirstIn;
+    units::meter_t<double>                        altitude;
+    units::grams_per_squared_centimeter_t<float>  X0;
+    units::grams_per_squared_centimeter_t<float>  Xmax;
+    float                                         Nmax;
+    units::grams_per_squared_centimeter_t<float>  p1;
+    float                                         p2;
+    units::squared_centimeters_per_gram_t<float>  p3;
+    float                                         chi2;
+    units::grams_per_squared_centimeter_t<float>  Xmx;
+    float                                         Nmx;
+    units::grams_per_squared_centimeter_t<float>  XmxdEdX;
+    units::gev_per_gcm_t<float>                   dEdXmx;
+    units::second_t<float>                        cpuTime;
+    int                                           nX;
 
-    float  X[max_entries];
+    units::grams_per_squared_centimeter_t<float>  X[max_entries];
+    units::meter_t<float>  H[max_entries];
+    units::meter_t<float>  D[max_entries];
+    units::gev_per_gcm_t<float>  dEdX[max_entries];
     float  N[max_entries];
-    float  H[max_entries];
-    float  D[max_entries];
-    float  dEdX[max_entries];
     float  Mu[max_entries];
     float  Gamma[max_entries];
     float  Electrons[max_entries];
     float  Hadrons[max_entries];
     float  dMu[max_entries];
-    float  EGround[3];
+
+    units::gigaelectron_volt_t<float>  EGround[3];
 
   public:
 
     // * direct access to CONEX scalar data
 
     // primary energy
-    auto get_energy() const
+    units::energy_t get_energy() const
     {return units::gigaelectron_volt_t<double>(util::math::pow(10, lgE - 9));}
 
     // zenith/azimuth of shower axis
-    auto get_zenith() const
-    {return units::degree_t<double>(zenith);}
+    units::angle_t get_zenith() const
+    {return zenith;}
 
-    auto get_azimuth() const
-    {return units::degree_t<double>(azimuth);}
+    units::angle_t get_azimuth() const
+    {return azimuth;}
 
     // random seeds
     int get_seed2() const
@@ -76,63 +77,60 @@ namespace conex {
     {return Seed3;}
 
     // data from the first interaction
-    auto get_first_interaction_depth() const
-    {return units::grams_per_squared_centimeter_t<double>(Xfirst);}
+    units::depth_t get_first_interaction_depth() const
+    {return Xfirst;}
 
-    auto get_first_interaction_height() const
-    {return units::meter_t<double>(Hfirst);}
+    units::length_t get_first_interaction_height() const
+    {return Hfirst;}
 
     double get_first_interaction_inelasticty() const
     {return XfirstIn;}
 
     // impact parameter
-    auto get_altitude() const
-    {return units::meter_t<double>(altitude);}
+    units::length_t get_altitude() const
+    {return altitude;}
 
     // gaisser hillas fit (6 parameters)
-    auto get_x0() const
-    {return units::grams_per_squared_centimeter_t<double>(X0);}
+    units::depth_t get_x0() const
+    {return X0;}
 
-    auto get_xmax() const
-    {return units::grams_per_squared_centimeter_t<double>(Xmax);}
+    units::depth_t get_xmax() const
+    {return Xmax;}
 
     double get_nmax() const
     {return Nmax;}
 
-    auto get_p1() const
-    {return units::grams_per_squared_centimeter_t<double>(p1);}
+    units::depth_t get_p1() const
+    {return p1;}
 
     double get_p2() const
     {return p2;}
 
-    auto get_p3() const
-    {return p3 / units::grams_per_squared_centimeter_t<double>(1);}
+    units::squared_centimeters_per_gram_t<float> get_p3() const
+    {return p3;}
 
     double get_chi2() const
     {return chi2;}
 
     // real xmax
-    auto get_xmx() const
-    {return units::grams_per_squared_centimeter_t<double>(Xmx);}
+    units::depth_t get_xmx() const
+    {return Xmx;}
 
     // real nmax
     double get_nmx() const
     {return Nmx;}
 
     // real xmax of dEdX profile
-    auto get_xmx_dedx() const
-    {return units::grams_per_squared_centimeter_t<double>(XmxdEdX);}
+    units::depth_t get_xmx_dedx() const
+    {return XmxdEdX;}
 
     // real max value of dEdX profile
-    auto get_dedx_mx() const
-    {
-      using namespace units::literals;
-      return dEdXmx * (1_GeV/1_gcm2);
-    }
+    units::energy_deposit_t get_dedx_mx() const
+    {return dEdXmx;}
 
     // cpu time in seconds
-    auto get_cpu_time() const
-    {return units::second_t<double>(cpuTime);}
+    units::time_t get_cpu_time() const
+    {return cpuTime;}
 
     // number of points in the longitudinal profiles
     int get_nx() const
@@ -140,58 +138,64 @@ namespace conex {
 
     // * profiles
 
-    auto get_depths() const
-    {
-      using quantity_type = units::grams_per_squared_centimeter_t<float>;
-      return (quantity_type*)X;
-    }
+    // (slant) atmospheric depth profile
+    const units::grams_per_squared_centimeter_t<float>* get_depths() const
+    {return X;}
 
+    // height (above sea level) profile
+    const units::meter_t<float>* get_heights() const
+    {return H;}
+
+    // distances to impact point
+    const units::meter_t<float>* get_distances() const
+    {return D;}
+
+    // energy deposit profile
+    const units::gev_per_gcm_t<float>* get_dedx() const
+    {return dEdX;}
+
+    // number of charged particles
     const float* get_charged() const
     {return N;}
 
-    auto get_heights() const
-    {return (units::meter_t<float>*)H;}
-
-    auto get_distances() const
-    {return (units::meter_t<float>*)D;}
-
-    auto get_dedx() const
-    {
-      using namespace units;
-      using unit_type = make_unit<gigaelectron_volt, inverse<grams_per_squared_centimeter>>;
-      return (quantity<unit_type, float>*)dEdX;
-    }
-
+    // number of muons
     const float* get_muons() const
     {return Mu;}
 
+    // number of photons
     const float* get_photons() const
     {return Gamma;}
 
+    // number of electrons + positrons
     const float* get_electrons() const
     {return Electrons;}
 
+    // number of hadrons
     const float* get_hadrons() const
     {return Hadrons;}
 
+    // muon production depth profile
     const float* get_mpd() const
     {return dMu;}
 
     // * energy at ground
     
-    auto get_ground_energy_em() const
-    {return units::gigaelectron_volt_t<double>(EGround[0]);}
+    units::energy_t get_ground_energy_em() const
+    {return EGround[0];}
 
-    auto get_ground_energy_hadrons() const
-    {return units::gigaelectron_volt_t<double>(EGround[1]);}
+    units::energy_t get_ground_energy_hadrons() const
+    {return EGround[1];}
 
-    auto get_ground_energy_muons() const
-    {return units::gigaelectron_volt_t<double>(EGround[2]);}
+    units::energy_t get_ground_energy_muons() const
+    {return EGround[2];}
 
     // * access to the gaisser hillas fit
 
     util::gaisser_hillas_fit get_fit() const
-    {return util::gaisser_hillas_fit(Nmax, X0, Xmax, p1, p2, p3);}
+    {
+      using namespace units::literals;
+      return util::gaisser_hillas_fit(Nmax, X0/1_gcm2, Xmax/1_gcm2, p1/1_gcm2, p2, p3*1_gcm2);
+    }
 
     // * generate profile TGraphs
 
