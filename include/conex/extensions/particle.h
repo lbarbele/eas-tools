@@ -109,7 +109,9 @@ namespace conex::extensions {
     util::vector_t<units::speed_t> get_velocity() const
     {
       using namespace units::literals;
-      return get_momentum() * (1_c*1_c/get_energy());
+      return get_id() == 10?
+        1_c * get_momentum().get_normalized(1) :
+        get_momentum() * (1_c*1_c/get_energy());
     }
 
     // get particle id (conex/nexus code)
