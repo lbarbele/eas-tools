@@ -17,7 +17,6 @@ namespace {
     // * check for matching IDs
     // both particle and projectile must have the same particle ID
     if (part->get_id() != proj->get_id()) {
-      if (verbose) std::cerr << "id ";
       return false;
     }
 
@@ -50,7 +49,7 @@ namespace {
       proj->get_position()    /* actual final position */ ;
       
     if (posDif.norm() > 1_um) {
-      if (verbose) std::cerr << " position ";
+      if (verbose) std::cerr << "position ";
       return false;
     }
 
@@ -141,9 +140,6 @@ namespace conex::extensions {
       // pointer to the matching interaction, if any
       interaction_ptr matching_interaction = nullptr;
 
-      // as a sanity check, we count the number of matches
-      int matching_interaction_count = 0;
-
       if (verbose) {
         std::cerr
           << std::left
@@ -157,7 +153,7 @@ namespace conex::extensions {
       // iterate over remaining interactions, searching for a match with the current particle
       for (const interaction_ptr& interaction : others) {
 
-        if (verbose) {
+        if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
           std::cerr
             << std::left
             << ". candidate "
@@ -168,18 +164,16 @@ namespace conex::extensions {
         }
 
         // check if this is a match. if so, get a pointer to such interaction in case this is
-        // the first match and incremet the match counter. if it is a match, but not the first
-        // one, just increment the counter
+        // the first match. if it is a match, but not the first one, disambiguate by selecting
+        // the interaction that happened first
         if (match(current_particle, interaction->get_projectile(), verbose)) {
-          if (!matching_interaction) {
+          if (!matching_interaction || interaction->get_time() < matching_interaction->get_time()) {
             matching_interaction = interaction;
           }
-          ++matching_interaction_count;
-
           if (verbose) {
             std::cerr << "match!" << std::endl;
           }
-        } else if (verbose) {
+        } else if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
           std::cerr << "fail" << std::endl;
         }
       }
@@ -196,14 +190,6 @@ namespace conex::extensions {
           << " did not match and will go to stack\n";
         tree->m_products.push_back(current_particle);
         continue;
-      }
-
-      // if there was more than one match, notify 
-      if (matching_interaction_count > 1) {
-        std::cerr
-          << "! "
-          << matching_interaction_count
-          << " candidate interactions found for particle. only one is expected!\n";
       }
 
       // add the matching interaction as a sub-interaction_tree relative to this interaction tree
