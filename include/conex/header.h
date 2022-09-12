@@ -18,29 +18,29 @@ namespace conex {
     double Alpha;
     double lgEmin;
     double lgEmax;
-    double zMin;
-    double zMax;
+    units::degree_t<double> zMin;
+    units::degree_t<double> zMax;
     float  Version;
     float  OutputVersion;
     int    HEModel;
     int    LEModel;
-    float  HiLowEgy;
-    float  hadCut;
-    float  emCut;
+    units::gigaelectron_volt_t<float>  HiLowEgy;
+    units::gigaelectron_volt_t<float>  hadCut;
+    units::gigaelectron_volt_t<float>  emCut;
     float  hadThr;
     float  muThr;
     float  emThr;
-    float  haCut;
-    float  muCut;
-    float  elCut;
-    float  gaCut;
+    units::gigaelectron_volt_t<float>  haCut;
+    units::gigaelectron_volt_t<float>  muCut;
+    units::gigaelectron_volt_t<float>  elCut;
+    units::gigaelectron_volt_t<float>  gaCut;
     
     std::array<double, 31> lambdaLgE;
-    std::array<double, 31> lambdaProton;
-    std::array<double, 31> lambdaPion;
-    std::array<double, 31> lambdaHelium;
-    std::array<double, 31> lambdaNitrogen;
-    std::array<double, 31> lambdaIron;
+    std::array<units::grams_per_squared_centimeter_t<double>, 31> lambdaProton;
+    std::array<units::grams_per_squared_centimeter_t<double>, 31> lambdaPion;
+    std::array<units::grams_per_squared_centimeter_t<double>, 31> lambdaHelium;
+    std::array<units::grams_per_squared_centimeter_t<double>, 31> lambdaNitrogen;
+    std::array<units::grams_per_squared_centimeter_t<double>, 31> lambdaIron;
 
     // conex extensions
     int    resamplingMode;
@@ -64,17 +64,17 @@ namespace conex {
     double get_alpha() const
     {return Alpha;}
 
-    auto get_energy_min() const
+    units::energy_t get_energy_min() const
     {return units::gigaelectron_volt_t<double>(util::math::pow(10, lgEmin - 9));}
 
-    auto get_energy_max() const
+    units::energy_t get_energy_max() const
     {return units::gigaelectron_volt_t<double>(util::math::pow(10, lgEmax - 9));}
 
-    auto get_zenith_min() const
-    {return units::degree_t<double>(zMin);}
+    units::angle_t get_zenith_min() const
+    {return zMin;}
 
-    auto get_zenith_max() const
-    {return units::degree_t<double>(zMax);}
+    units::angle_t get_zenith_max() const
+    {return zMax;}
 
     float get_version() const
     {return Version;}
@@ -88,14 +88,14 @@ namespace conex {
     int get_le_model() const
     {return LEModel;}
 
-    auto get_energy_threshold() const
-    {return units::gigaelectron_volt_t<double>(HiLowEgy);}
+    units::energy_t get_energy_threshold() const
+    {return HiLowEgy;}
 
-    auto get_profile_cut_hadrons() const
-    {return units::gigaelectron_volt_t<double>(hadCut);}
+    units::energy_t get_profile_cut_hadrons() const
+    {return hadCut;}
 
-    auto get_profile_cut_em() const
-    {return units::gigaelectron_volt_t<double>(emCut);}
+    units::energy_t get_profile_cut_em() const
+    {return emCut;}
 
     double get_threshold_hadrons() const
     {return hadThr;}
@@ -106,17 +106,17 @@ namespace conex {
     double get_threshold_electrons() const
     {return emThr;}
 
-    auto get_cut_hadrons() const
-    {return units::gigaelectron_volt_t<double>(haCut);}
+    units::energy_t get_cut_hadrons() const
+    {return haCut;}
 
-    auto get_cut_muons() const
-    {return units::gigaelectron_volt_t<double>(muCut);}
+    units::energy_t get_cut_muons() const
+    {return muCut;}
 
-    auto get_cut_electrons() const
-    {return units::gigaelectron_volt_t<double>(elCut);}
+    units::energy_t get_cut_electrons() const
+    {return elCut;}
 
-    auto get_cut_photons() const
-    {return units::gigaelectron_volt_t<double>(gaCut);}
+    units::energy_t get_cut_photons() const
+    {return gaCut;}
 
     // mean free path arrays
     auto get_lambda_energy() const
@@ -129,20 +129,20 @@ namespace conex {
       return ret;
     }
 
-    auto& get_lambda_proton() const
-    {return reinterpret_cast<const std::array<units::grams_per_cubed_centimeter_t<double>, 31>&>(lambdaProton);}
+    const auto& get_lambda_proton() const
+    {return lambdaProton;}
 
-    auto& get_lambda_pion() const
-    {return reinterpret_cast<const std::array<units::grams_per_cubed_centimeter_t<double>, 31>&>(lambdaPion);}
+    const auto& get_lambda_pion() const
+    {return lambdaPion;}
 
-    auto& get_lambda_helium() const
-    {return reinterpret_cast<const std::array<units::grams_per_cubed_centimeter_t<double>, 31>&>(lambdaHelium);}
+    const auto& get_lambda_helium() const
+    {return lambdaHelium;}
 
-    auto& get_lambda_nitrogen() const
-    {return reinterpret_cast<const std::array<units::grams_per_cubed_centimeter_t<double>, 31>&>(lambdaNitrogen);}
+    const auto& get_lambda_nitrogen() const
+    {return lambdaNitrogen;}
 
-    auto& get_lambda_iron() const
-    {return reinterpret_cast<const std::array<units::grams_per_cubed_centimeter_t<double>, 31>&>(lambdaIron);}
+    const auto& get_lambda_iron() const
+    {return lambdaIron;}
 
     // extension fields
     bool has_extensions() const
@@ -151,12 +151,8 @@ namespace conex {
     int get_resampling_mode() const
     {return resamplingMode;}
 
-    double get_mod_threshold() const
-    {
-      // TODO
-      std::cerr << "WARNING: modification threshold has unknown units and is computed as double" << std::endl;
-      return modThreshold;
-    }
+    units::energy_t get_mod_threshold() const
+    {return units::gigaelectron_volt_t<double>(std::pow(10, modThreshold));}
 
     double get_f19_cx() const
     {return f19_cx;}
