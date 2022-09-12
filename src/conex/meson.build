@@ -3,7 +3,7 @@ conex_sources = [
   'file.iterator.cpp'
 ]
 
-libconex = library(
+libconex = shared_library(
   'conex', conex_sources,
   include_directories : inc_src,
   cpp_args: cpp_args,

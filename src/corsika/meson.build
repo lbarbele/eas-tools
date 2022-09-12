@@ -12,7 +12,7 @@ corsika_sources = [
   'profile.cpp'
 ]
 
-libcorsika = library(
+libcorsika = shared_library(
   'corsika',
   corsika_sources,
   include_directories : inc_src,

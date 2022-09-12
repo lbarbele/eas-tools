@@ -4,7 +4,7 @@ conex_extension_sources = [
   'interaction_tree.cpp'
 ]
 
-libconexextensions = library(
+libconexextensions = shared_library(
   'conex_extensions', conex_extension_sources,
   include_directories: inc_src,
   cpp_args: cpp_args,
