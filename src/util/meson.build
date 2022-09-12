@@ -1,6 +1,5 @@
 util_sources = [
-  'gaisser_hillas_fit.cpp',
-  'math.cpp'
+  'gaisser_hillas_fit.cpp'
 ]
 
 libutil = library(
