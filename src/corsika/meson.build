@@ -16,6 +16,5 @@ libcorsika = library(
   'corsika',
   corsika_sources,
   include_directories : inc_src,
-  link_with: [libutil],
   install: true
 )

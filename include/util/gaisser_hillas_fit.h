@@ -3,6 +3,7 @@
 
 #include <array>
 #include <algorithm>
+#include <cmath>
 
 namespace util {
 
@@ -11,14 +12,41 @@ namespace util {
     std::array<double, 6> m_param;
 
   public:
-    gaisser_hillas_fit(const double nmax = 0, const double x0 = 0, const double xmax = 0, const double p1 = 0, const double p2 = 0, const double p3 = 0);
+    gaisser_hillas_fit(
+      const double nmax = 0,
+      const double x0 = 0,
+      const double xmax = 0,
+      const double p1 = 0,
+      const double p2 = 0,
+      const double p3 = 0
+    ) :
+      m_param{nmax, x0, xmax, p1, p2, p3}
+    {}
 
     template<class array_t>
     gaisser_hillas_fit(const array_t& v)
     {set_parameters(v);}
 
     // evaluators
-    double eval(const double x) const;
+    double
+    eval(
+      const double x
+    ) const
+    {
+      auto& [nmax, x0, xmax, p1, p2, p3] = m_param;
+
+      const double y = x - x0;
+
+      if (y <= 0) {
+        return 0;
+      }
+
+      const double ymax = xmax - x0;
+      const double dy = x - xmax;
+      const double lambda = p1 + x*(p2 + x*p3);
+
+      return nmax * std::pow(y/ymax, ymax/lambda) * std::exp(-dy/lambda);
+    }
 
     double operator()(const double x) const
     {return eval(x);}
