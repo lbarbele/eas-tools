@@ -38,7 +38,7 @@ namespace conex::extensions {
       units::meter_t<double> x;                                     // dptl(6)
       units::meter_t<double> y;                                     // dptl(7)
       units::meter_t<double> height;                                // dptl(8)
-      units::second_t<double> time;                                 // dptl(9)
+      units::meter_t<double> time;                                  // dptl(9)
       double id = 0;                                                // dptl(10)
       double weight = 0;                                            // dptl(11)
       double generation = 0;                                        // dptl(12)
@@ -122,7 +122,7 @@ namespace conex::extensions {
 
     // get projectile time
     units::time_t get_time() const
-    {return data().time;}
+    {return data().time/util::constants::speed_of_light;}
 
     // get projectile energy
     units::energy_t get_energy() const
