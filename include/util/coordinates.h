@@ -129,7 +129,7 @@ namespace util {
   )
   {
     auto w = stream.width();
-    stream << "(";
+    stream << std::setw(0) << "(";
     stream << std::setw(w) << c.x() << ", ";
     stream << std::setw(w) << c.y() << ", ";
     stream << std::setw(w) << c.z() << ")";
