@@ -8,9 +8,8 @@ endforeach
 
 example_progs = [
   'make_stack',
-  'check_stack',
   'get_alpha',
-  'fit_conex_profiles',
+  'parametrize_conex_profiles',
   'plot_conex_profiles',
   'plot_corsika_profiles',
   'plot_coreas_data'
