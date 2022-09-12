@@ -34,14 +34,16 @@ namespace conex::extensions {
 
     static interaction_tree_ptr create(
       const event& evt,
-      const units::energy_t energy_threshold
+      const units::energy_t energy_threshold,
+      const bool verbose = false
     );
 
     static interaction_tree_ptr create(
       const interaction_ptr& source,
       std::list<interaction_ptr>& others,
       const units::energy_t energy_threshold,
-      const int generation
+      const int generation,
+      const bool verbose = false
     );
 
     // - Getters

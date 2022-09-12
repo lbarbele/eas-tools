@@ -73,6 +73,10 @@ int main(int argc, char** argv) {
     cmdLine, true
   );
 
+  TCLAP::SwitchArg verboseFlag("v", "verbose",
+    "Enable/disable verbosity when parsing the interaction tree.",
+    cmdLine, false);
+
   // * actually parse the command line
 
   cmdLine.parse(argc, argv);
@@ -175,7 +179,7 @@ int main(int argc, char** argv) {
 
   // -  compute the interaction tree
 
-  ce::interaction_tree_ptr tree = ce::interaction_tree::create(evt, energyThreshold);
+  ce::interaction_tree_ptr tree = ce::interaction_tree::create(evt, energyThreshold, verboseFlag);
 
   // -  the stack is a list that will hold secpar_t objects
 
