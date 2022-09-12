@@ -121,6 +121,9 @@ namespace conex::extensions {
     double get_inelasticity() const
     {return 1 - get_elasticity();}
 
+    units::time_t get_time() const
+    {return get_projectile()->get_time();}
+
     // * access to projectile/secondary particles
 
     const projectile_ptr& get_projectile() const
