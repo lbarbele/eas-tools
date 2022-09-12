@@ -304,13 +304,23 @@ int main(int argc, char** argv) {
 
   if (std::fabs(totalEnergySum/primaryEnergy - 1) > 1e-5) {
     std::cerr << "bad energy sum" << std::endl;
+    std::cerr << "total momentum (sum): " << totalEnergySum << std::endl;
+    std::cerr << "primary particle:     " << primaryEnergy << std::endl;
+    std::cerr << "deviation: " << totalEnergySum/primaryEnergy - 1 << std::endl;
     return 1;
   }
 
   const util::vector_t<units::momentum_t> pprim = primaryParticle->get_momentum();
 
-  if ((totalMomentumSum - pprim).norm()/pprim.norm() > 1e-5) {
+  if (
+    util::angle<units::degree>(totalMomentumSum, pprim) > 1e-7_rad ||
+    (totalMomentumSum - pprim).norm()/pprim.norm() > 1e-4
+  ) {
     std::cerr << "bad momentum sum" << std::endl;
+    std::cerr << "total momentum (sum): " << std::setw(15) << totalMomentumSum.on_frame(util::frame::conex_observer) << std::endl;
+    std::cerr << "primary particle:     " << std::setw(15) << pprim.on_frame(util::frame::conex_observer) << std::endl;
+    std::cerr << "deviation: " << (totalMomentumSum - pprim).norm()/pprim.norm() << std::endl;
+    std::cerr << "angle: " << util::angle<units::degree>(totalMomentumSum, pprim) << std::endl;
     return 1;
   }
 
