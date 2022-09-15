@@ -187,11 +187,11 @@ namespace conex::extensions {
       if (!matching_interaction) {
         // notify if high energy particle did not match any interaction
         std::cerr
-          << "! particle above threshold with ID "
-          << current_particle->get_id()
-          << " carrying energy of "
-          << current_particle->get_energy()
-          << " did not match and will go to stack\n";
+          << "! unmatched particle ("
+          << "ID: " << current_particle->get_id()
+          << ", E: " << current_particle->get_energy()
+          << ", E/Ethr: " << current_particle->get_energy()/energy_threshold
+          << ")\n";
         tree->m_products.push_back(current_particle);
         continue;
       }
