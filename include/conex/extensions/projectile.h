@@ -132,6 +132,18 @@ namespace conex::extensions {
     units::mass_t get_mass() const
     {return data().mass;}
 
+    // get projectile velocity
+    util::vector_t<units::speed_t> get_velocity() const
+    {
+      using namespace units::literals;
+
+      const util::vector_d beta = get_id() == 10?
+        get_momentum().get_normalized(1) :
+        get_momentum() * 1_c / get_energy();
+
+      return 1_c * beta;
+    }
+
     // get projectile height [m]
     units::length_t get_height() const
     {return units::meter_t<double>(data().height);}
