@@ -25,12 +25,12 @@ namespace {
     // energy (meaning the particle cannot gain energy during propagation) and
     // that relative energy lost is below 0.001%
     const double edev = proj->get_energy()/part->get_energy() - 1;
-    if (edev > 0 || edev < -1e-5) {
-      if (verbose) std::cerr << "edev ";
+    if (edev > 1e-10 || edev < -1e-5) {
+      if (verbose) std::cerr << "(" << edev << ") edev ";
       return false;
     }
 
-    // * check for matching momentum
+    // * check for matching momentum direction
     // it is required that the angle between particle and projectile momentum
     // is below 10^-7 rad
     const auto angle = util::angle(part->get_momentum(), proj->get_momentum());
@@ -47,9 +47,13 @@ namespace {
       part->get_formation_point()  /* initial position */ +
       deltaTime * part->get_velocity() /* displacement */ -
       proj->get_position()    /* actual final position */ ;
-      
-    if (posDif.norm() > 1_um) {
-      if (verbose) std::cerr << "position ";
+
+    const units::length_t posDifCut = 
+      (util::math::abs(proj->get_id()) == 12 || proj->get_id() == 10) ?
+      units::length_t(1_m) : units::length_t(1_um);
+
+    if (posDif.norm() > posDifCut) {
+      if (verbose) std::cerr << "(" << posDif.norm() << ") " << "position ";
       return false;
     }
 
@@ -111,8 +115,7 @@ namespace conex::extensions {
         << "+ projectile: " << source->get_projectile()->get_id() << std::endl
         << "+ energy: " << source->get_projectile()->get_energy() << std::endl
         << "+ momentum: " << source->get_projectile()->get_momentum().on_frame(util::frame::conex_observer) << std::endl
-        << "+ secondary multiplicity: " << source->get_multiplicity() << std::endl
-        << std::endl;
+        << "+ secondary multiplicity: " << source->get_multiplicity() << std::endl;
     }
 
     // create an empty interaction tree and set its basic properties
@@ -142,6 +145,7 @@ namespace conex::extensions {
 
       if (verbose) {
         std::cerr
+          << std::endl
           << std::left
           << "+ searching "
           << "(id) " << std::setw(5) << current_particle->get_id()
