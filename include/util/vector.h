@@ -288,7 +288,7 @@ namespace util {
 
   template <concepts::scalar A, concepts::scalar B>
   auto cos_angle(const vector_t<A>& a, const vector_t<B>& b)
-  {return a.get_normalized(1) * b.get_normalized(1);}
+  {return std::max(-1.0, std::min(1.0, a.get_normalized(1) * b.get_normalized(1)));}
 
   template <class U = units::radian, concepts::scalar A, concepts::scalar B>
   auto angle(const vector_t<A>& a, const vector_t<B>& b)
