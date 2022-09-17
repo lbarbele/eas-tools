@@ -45,7 +45,7 @@ namespace conex::extensions {
       units::grams_per_squared_centimeter_t<double> slantTraversed; // ... dptl(13)
       units::meter_t<double> xShower; // ................................. dptl(14)
       units::meter_t<double> yShower; // ................................. dptl(15)
-      // TODO: dptl(16) which is distance to impact is missing!
+      units::meter_t<double> slantToImpact // ............................ dptl(16)
       
       int interactionCounter = 0;
       
@@ -53,8 +53,6 @@ namespace conex::extensions {
       double c0xs = 0;
       double s0s = 0;
       double s0xs = 0;
-      
-      double slantToImpact = 0;
     };
 
   private:
@@ -167,7 +165,7 @@ namespace conex::extensions {
 
     // slant distance to the impact point [m]
     units::length_t get_distance_to_impact() const
-    {return units::meter_t<double>(data().slantToImpact);}
+    {return data().slantToImpact;}
 
     // projectile x position on the shower plane [m]
     units::length_t get_xshower() const
