@@ -30,21 +30,21 @@ namespace conex::extensions {
   
     // * data_t holds the data to read the projectile tree
     struct data_t {
-      units::gev_per_c_t<double> Px;                                // dptl(1)
-      units::gev_per_c_t<double> Py;                                // dptl(2)
-      units::gev_per_c_t<double> Pz;                                // dptl(3)
-      units::gigaelectron_volt_t<double> Energy;                    // dptl(4)
-      units::gev_per_c_squared_t<double> mass;                      // dptl(5)
-      units::meter_t<double> x;                                     // dptl(6)
-      units::meter_t<double> y;                                     // dptl(7)
-      units::meter_t<double> height;                                // dptl(8)
-      units::meter_t<double> time;                                  // dptl(9)
-      double id = 0;                                                // dptl(10)
-      double weight = 0;                                            // dptl(11)
-      double generation = 0;                                        // dptl(12)
-      units::grams_per_squared_centimeter_t<double> slantTraversed; // dptl(13)
-      units::meter_t<double> xShower;                               // dptl(14)
-      units::meter_t<double> yShower;                               // dptl(15)
+      units::gev_per_c_t<double> Px; // .................................. dptl(1)
+      units::gev_per_c_t<double> Py; // .................................. dptl(2)
+      units::gev_per_c_t<double> Pz; // .................................. dptl(3)
+      units::gigaelectron_volt_t<double> Energy; // ...................... dptl(4)
+      units::gev_per_c_squared_t<double> mass; // ........................ dptl(5)
+      units::meter_t<double> x; // ....................................... dptl(6)
+      units::meter_t<double> y; // ....................................... dptl(7)
+      units::meter_t<double> height; // .................................. dptl(8)
+      units::meter_t<double> time; // .................................... dptl(9)
+      double id = 0; // .................................................. dptl(10)
+      double weight = 0; // .............................................. dptl(11)
+      double generation = 0; // .......................................... dptl(12)
+      units::grams_per_squared_centimeter_t<double> slantTraversed; // ... dptl(13)
+      units::meter_t<double> xShower; // ................................. dptl(14)
+      units::meter_t<double> yShower; // ................................. dptl(15)
       // TODO: dptl(16) which is distance to impact is missing!
       
       int interactionCounter = 0;
