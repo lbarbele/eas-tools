@@ -102,7 +102,7 @@ namespace conex::extensions {
     {return data().eProd;}
 
     units::energy_t get_proj_energy() const
-    {return data().eProj;}
+    {return get_projectile()->get_energy();}
 
     const int& get_interaction_counter() const
     {return data().interactionCounter;}
