@@ -89,8 +89,8 @@ namespace conex::extensions {
     const int& get_multiplicity() const
     {return data().mult;}
     
-    const int& get_projectile_id() const
-    {return data().idProj;}
+    int get_projectile_id() const
+    {return get_projectile()->get_id();}
 
     const int& get_target_id() const
     {return data().idTarg;}
