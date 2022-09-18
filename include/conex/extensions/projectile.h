@@ -45,7 +45,7 @@ namespace conex::extensions {
       units::grams_per_squared_centimeter_t<double> slantTraversed; // ... dptl(13)
       units::meter_t<double> xShower; // ................................. dptl(14)
       units::meter_t<double> yShower; // ................................. dptl(15)
-      units::meter_t<double> slantToImpact // ............................ dptl(16)
+      units::meter_t<double> slantToImpact; // ........................... dptl(16)
       
       int interactionCounter = 0;
       
