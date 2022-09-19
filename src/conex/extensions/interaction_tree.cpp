@@ -99,8 +99,20 @@ namespace conex::extensions {
         << "+ secondary multiplicity: " << source->get_multiplicity() << std::endl;
     }
 
+    // ensure list of interactions is sorted by time in ascending order
+    others.sort([](auto a, auto b){
+      return a->get_time() < b->get_time();
+    });
+
     // call overload accepting interaction list
-    return create(source, others, energy_threshold, generation, verbose);
+    auto tree = create(source, others, energy_threshold, generation, verbose);
+
+    // if verbose, print how many interactions were left unmatched
+    if (verbose) {
+      std::cerr << "\ndone with " << others.size() << " interactions left unmatched\n";
+    }
+
+    return tree;
   }
 
   interaction_tree_ptr
@@ -178,12 +190,11 @@ namespace conex::extensions {
         // the first match. if it is a match, but not the first one, disambiguate by selecting
         // the interaction that happened first
         if (match(current_particle, interaction->get_projectile(), verbose)) {
-          if (!matching_interaction || interaction->get_time() < matching_interaction->get_time()) {
-            matching_interaction = interaction;
-          }
+          matching_interaction = interaction;
           if (verbose) {
             std::cerr << "match!" << std::endl;
           }
+          break; // > stop after the first match (recall interactions are sorted by time)
         } else if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
           std::cerr << "fail" << std::endl;
         }
