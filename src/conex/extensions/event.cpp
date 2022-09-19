@@ -173,7 +173,7 @@ namespace conex::extensions {
       if (check) {
         const util::vector_t<units::momentum_t> pproj = current_interaction->get_projectile()->get_momentum();
         const double pdev = (psum-pproj).norm() / pproj.norm();
-        if (pdev > 1e-2 /* 1% */) {
+        if (pdev > 2e-2 /* 2% */) {
           std::stringstream str;
           str << "conex extensions momentum mismatch" << std::endl;
           str << "psum: " << psum.on_frame(util::frame::conex_observer) << std::endl;
