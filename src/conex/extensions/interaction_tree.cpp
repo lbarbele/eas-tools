@@ -23,7 +23,6 @@ namespace {
     // * check for matching IDs
     // both particle and projectile must have the same particle ID
     if (particleId != proj->get_id()) {
-      if (verbose) std::cerr << "(" << proj->get_id() << ") id ";
       return false;
     }
 
@@ -165,11 +164,11 @@ namespace conex::extensions {
       // iterate over remaining interactions, searching for a match with the current particle
       for (const interaction_ptr& interaction : others) {
 
-        if (verbose) {
+        if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
           std::cerr
             << std::left
             << ". candidate "
-            << "(id) " << std::setw(5) << interaction->get_projectile_id() << " / " << std::setw(5) << interaction->get_projectile()->get_id()
+            << "(id) " << std::setw(5) << interaction->get_projectile_id()
             << " (E) " << std::setw(15) << interaction->get_proj_energy()
             << " (p) " << std::setw(15) << interaction->get_projectile()->get_momentum().on_frame(util::frame::conex_observer)
             << " ... " << std::right;
@@ -185,7 +184,7 @@ namespace conex::extensions {
           if (verbose) {
             std::cerr << "match!" << std::endl;
           }
-        } else if (verbose) {
+        } else if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
           std::cerr << "fail" << std::endl;
         }
       }
