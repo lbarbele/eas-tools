@@ -14,18 +14,25 @@ namespace {
     const bool verbose = false
   )
   {
+    auto particleId =
+      part->get_id() == 17? 200 :
+      part->get_id() == 18? 300 :
+      part->get_id() == 19? 400 :
+      part->get_id();
+
     // * check for matching IDs
     // both particle and projectile must have the same particle ID
-    if (part->get_id() != proj->get_id()) {
+    if (particleId != proj->get_id()) {
+      if (verbose) std::cerr << "(" << proj->get_id() << ") id ";
       return false;
     }
 
     // * check for matching energy
     // requirements are that the projectile energy does not exceed the particle
     // energy (meaning the particle cannot gain energy during propagation) and
-    // that relative energy lost is below 0.001%
+    // that the relative energy lost is below 0.1%
     const double edev = proj->get_energy()/part->get_energy() - 1;
-    if (edev > 1e-10 || edev < -1e-5) {
+    if (edev > 1e-7 || edev < -1e-3) {
       if (verbose) std::cerr << "(" << edev << ") edev ";
       return false;
     }
@@ -151,19 +158,20 @@ namespace conex::extensions {
           << "(id) " << std::setw(5) << current_particle->get_id()
           << " (E) " << std::setw(15) << current_particle->get_energy()
           << " (p) " << std::setw(15) << current_particle->get_momentum().on_frame(util::frame::conex_observer)
+          << " among " << others.size() << " interactions"
           << std::right << std::endl;
       }
 
       // iterate over remaining interactions, searching for a match with the current particle
       for (const interaction_ptr& interaction : others) {
 
-        if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
+        if (verbose) {
           std::cerr
             << std::left
             << ". candidate "
-            << "(id) " << std::setw(5) << interaction->get_projectile_id()
+            << "(id) " << std::setw(5) << interaction->get_projectile_id() << " / " << std::setw(5) << interaction->get_projectile()->get_id()
             << " (E) " << std::setw(15) << interaction->get_proj_energy()
-            << " (p) " << std::setw(15) <<interaction->get_projectile()->get_momentum().on_frame(util::frame::conex_observer)
+            << " (p) " << std::setw(15) << interaction->get_projectile()->get_momentum().on_frame(util::frame::conex_observer)
             << " ... " << std::right;
         }
 
@@ -177,7 +185,7 @@ namespace conex::extensions {
           if (verbose) {
             std::cerr << "match!" << std::endl;
           }
-        } else if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
+        } else if (verbose) {
           std::cerr << "fail" << std::endl;
         }
       }
@@ -190,6 +198,7 @@ namespace conex::extensions {
           << "! unmatched particle ("
           << "ID: " << current_particle->get_id()
           << ", E: " << current_particle->get_energy()
+          << ", m: " << current_particle->get_mass()
           << ", E/Ethr: " << current_particle->get_energy()/energy_threshold
           << ")\n";
         tree->m_products.push_back(current_particle);
