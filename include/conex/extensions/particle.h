@@ -52,6 +52,8 @@ namespace conex::extensions {
 
       int status = 0;           // istptlxs(i) ..... status
 
+      int uniqueParticleId = 0;        // iuniqueid(i) ..... unique particle id
+
       int interactionCounter = 0;
     };
   
@@ -120,6 +122,10 @@ namespace conex::extensions {
     // get particle id (conex/nexus code)
     const int& get_id() const
     {return data().id;}
+
+    // get unique id
+    const int& get_unique_id() const
+    {return data().uniqueParticleId;}
 
     // interaction counter
     const int& get_interaction_counter() const

@@ -46,6 +46,7 @@ namespace conex::extensions {
       units::meter_t<double> xShower; // ................................. dptl(14)
       units::meter_t<double> yShower; // ................................. dptl(15)
       units::meter_t<double> slantToImpact; // ........................... dptl(16)
+      double uniqueParticleId = 0; // .................................... dptl(17)
       
       int interactionCounter = 0;
       
@@ -174,6 +175,10 @@ namespace conex::extensions {
     // projectile y position on the shower plane [m]
     units::length_t get_yshower() const
     {return data().yShower;}
+
+    // get unique id
+    int get_unique_id() const
+    {return std::lround(data().uniqueParticleId);}
 
     // interaction counter
     const int& get_interaction_counter() const

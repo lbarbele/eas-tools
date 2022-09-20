@@ -69,6 +69,7 @@ namespace conex::extensions {
     projectile_tree->SetBranchAddress("slantTraversed",&projectile_data.slantTraversed);
     projectile_tree->SetBranchAddress("xShower",&projectile_data.xShower);
     projectile_tree->SetBranchAddress("yShower",&projectile_data.yShower);
+    projectile_tree->SetBranchAddress("uniqueParticleId",&projectile_data.uniqueParticleId);
 
     // * particle tree
     particle::data_t particle_data;
@@ -90,6 +91,7 @@ namespace conex::extensions {
     particle_tree->SetBranchAddress("id_father",&particle_data.id_father);
     particle_tree->SetBranchAddress("id_mother",&particle_data.id_mother);
     particle_tree->SetBranchAddress("status",&particle_data.status);
+    particle_tree->SetBranchAddress("uniqueParticleId",&particle_data.uniqueParticleId);
 
     // * get energy of the first interaction and determine threshold energy
     interaction_tree->GetEntry(0);
@@ -150,7 +152,7 @@ namespace conex::extensions {
       while (ipart < ipart_end) {
         particle_tree->GetEntry(ipart++);
 
-        // - consistency check: ensure partcile and interaction have the same counter
+        // - consistency check: ensure particle and interaction have the same counter
         if (check && particle_data.interactionCounter != interaction_data.interactionCounter) {
           throw std::runtime_error("conex extensions particle/interaction counter mismatch");
         }
@@ -169,7 +171,7 @@ namespace conex::extensions {
         throw std::runtime_error("conex extensions energy mismatch");
       }
 
-      // - consistency check: sum o secondary momenta must match projectile momentum
+      // - consistency check: sum of secondary momenta must match projectile momentum
       if (check) {
         const util::vector_t<units::momentum_t> pproj = current_interaction->get_projectile()->get_momentum();
         const double pdev = (psum-pproj).norm() / pproj.norm();
