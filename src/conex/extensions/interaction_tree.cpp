@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <conex/extensions/interaction_tree.h>
 #include <util/vector.h>
 #include <util/units.h>
@@ -5,67 +7,6 @@
 // - Helper functions
 
 using namespace units::literals;
-
-namespace {
-  bool
-  match(
-    const conex::extensions::particle_ptr& part,
-    const conex::extensions::projectile_ptr& proj,
-    const bool verbose = false
-  )
-  {
-    auto particleId =
-      part->get_id() == 17? 200 :
-      part->get_id() == 18? 300 :
-      part->get_id() == 19? 400 :
-      part->get_id();
-
-    // * check for matching IDs
-    // both particle and projectile must have the same particle ID
-    if (particleId != proj->get_id()) {
-      return false;
-    }
-
-    // * check for matching energy
-    // requirements are that the projectile energy does not exceed the particle
-    // energy (meaning the particle cannot gain energy during propagation) and
-    // that the relative energy lost is below 0.1%
-    const double edev = proj->get_energy()/part->get_energy() - 1;
-    if (edev > 1e-7 || edev < -1e-3) {
-      if (verbose) std::cerr << "(" << edev << ") edev ";
-      return false;
-    }
-
-    // * check for matching momentum direction
-    // it is required that the angle between particle and projectile momentum
-    // is below 10^-7 rad
-    const auto angle = util::angle(part->get_momentum(), proj->get_momentum());
-    if (angle >= 1e-7_rad) {
-      if (verbose) std::cerr << "angle ";
-      return false;
-    }
-
-    // * check projectile position
-    // it is required that, if particle is propagated up to the projectile interaction
-    // time, its distance to the interaction point is smaller than 1 micrometer
-    const units::time_t deltaTime = proj->get_time() - part->get_formation_time();
-    const util::vector_t<units::length_t> posDif =
-      part->get_formation_point()  /* initial position */ +
-      deltaTime * part->get_velocity() /* displacement */ -
-      proj->get_position()    /* actual final position */ ;
-
-    const units::length_t posDifCut = 
-      (util::math::abs(proj->get_id()) == 12 || proj->get_id() == 10) ?
-      units::length_t(1_m) : units::length_t(1_um);
-
-    if (posDif.norm() > posDifCut) {
-      if (verbose) std::cerr << "(" << posDif.norm() << ") " << "position ";
-      return false;
-    }
-
-    return true;
-  }
-}
 
 namespace conex::extensions {
 
@@ -79,37 +20,21 @@ namespace conex::extensions {
     // copy the vector of interactions for the event into a list
     std::list<interaction_ptr> others(evt.begin(), evt.end());
 
-    if (verbose) {
-      std::cerr
-        << "creating interaction tree from event with "
-        << evt.get_n_interactions()
-        << " interactions\n";
-    }
-
-    // get the other parameters
+    // get the source interaction
     interaction_ptr source = evt.get_interaction(0);
+
+    // remove the source interaction from the list of interactions to analyze
+    others.remove(source);
+
+    // start the generation counter
     const int generation = 0;
-
-    if (verbose) {
-      std::cerr
-        << "primary interaction data:\n"
-        << "+ projectile: " << source->get_projectile()->get_id() << std::endl
-        << "+ energy: " << source->get_projectile()->get_energy() << std::endl
-        << "+ momentum: " << source->get_projectile()->get_momentum().on_frame(util::frame::conex_observer) << std::endl
-        << "+ secondary multiplicity: " << source->get_multiplicity() << std::endl;
-    }
-
-    // ensure list of interactions is sorted by time in ascending order
-    others.sort([](auto a, auto b){
-      return a->get_time() < b->get_time();
-    });
 
     // call overload accepting interaction list
     auto tree = create(source, others, energy_threshold, generation, verbose);
 
     // if verbose, print how many interactions were left unmatched
     if (verbose) {
-      std::cerr << "\ndone with " << others.size() << " interactions left unmatched\n";
+      std::cerr << "\ndone with " << others.size() << " interactions left\n";
     }
 
     return tree;
@@ -124,9 +49,7 @@ namespace conex::extensions {
     const bool verbose
   )
   {
-    // remove the source interaction from the list, if present
-    others.remove(source);
-
+    // printout
     if (verbose) {
       std::cerr << std::endl
         << "creating interaction tree from source:\n"
@@ -141,6 +64,9 @@ namespace conex::extensions {
     tree->m_interaction = source;
     tree->m_energy_threshold = energy_threshold;
     tree->m_generation = generation;
+ 
+    // create a (empty) list of matching interactions
+    std::list<std::pair<particle_ptr, interaction_ptr>> matches;
 
     // loop over particles in the current interaction
     for (const particle_ptr& current_particle : *source) {
@@ -158,78 +84,72 @@ namespace conex::extensions {
         continue;
       }
 
-      // pointer to the matching interaction, if any
-      interaction_ptr matching_interaction = nullptr;
-
+      // print the particle whose interaction we are looking for
       if (verbose) {
         std::cerr
-          << std::endl
           << std::left
           << "+ searching "
           << "(id) " << std::setw(5) << current_particle->get_id()
           << " (E) " << std::setw(15) << current_particle->get_energy()
           << " (p) " << std::setw(15) << current_particle->get_momentum().on_frame(util::frame::conex_observer)
-          << " among " << others.size() << " interactions"
-          << std::right << std::endl;
+          << " among " << others.size() << " interactions ... "
+          << std::right;
       }
+
+      // pointer to the matching interaction, if any
+      interaction_ptr matching_interaction = nullptr;
 
       // iterate over remaining interactions, searching for a match with the current particle
       for (const interaction_ptr& interaction : others) {
-
-        if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
-          std::cerr
-            << std::left
-            << ". candidate "
-            << "(id) " << std::setw(5) << interaction->get_projectile_id()
-            << " (E) " << std::setw(15) << interaction->get_proj_energy()
-            << " (p) " << std::setw(15) << interaction->get_projectile()->get_momentum().on_frame(util::frame::conex_observer)
-            << " ... " << std::right;
-        }
-
-        // check if this is a match. if so, get a pointer to such interaction in case this is
-        // the first match. if it is a match, but not the first one, disambiguate by selecting
-        // the interaction that happened first
-        if (match(current_particle, interaction->get_projectile(), verbose)) {
+        if (current_particle->get_unique_id() == interaction->get_projectile()->get_unique_id()) {
           matching_interaction = interaction;
-          if (verbose) {
-            std::cerr << "match!" << std::endl;
-          }
-          break; // > stop after the first match (recall interactions are sorted by time)
-        } else if (verbose && interaction->get_projectile_id() == current_particle->get_id()) {
-          std::cerr << "fail" << std::endl;
+          break;
         }
       }
 
-      // if there were no matches, add particle to the list of final products, then
-      // continue with the next particle
+      // tell if search succeeded
+      if (verbose) {
+        std::cerr << (matching_interaction? "ok" : "fail") << std::endl;
+      }
+
       if (!matching_interaction) {
-        // notify if high energy particle did not match any interaction
+        // no matching interaction
+
+        // notify if high energy particle did not match any interaction because
+        // particles with energy above threshold are expected to match
         std::cerr
           << "! unmatched particle ("
           << "ID: " << current_particle->get_id()
           << ", E: " << current_particle->get_energy()
-          << ", m: " << current_particle->get_mass()
           << ", E/Ethr: " << current_particle->get_energy()/energy_threshold
           << ")\n";
+
+        // add particle to the stack of final products of this interaction
         tree->m_products.push_back(current_particle);
+
+        // go to the next particle
         continue;
+      } else {
+        // add interaction to the list of matches
+        matches.emplace_back(current_particle, matching_interaction);
+        // remove interaction from the list to be analyzed
+        others.remove(matching_interaction);
       }
 
+    } // loop over particles in the interaction
+
+    // loop over matches and create the subtrees
+    for (const auto& [particle, interaction] : matches) {
       // add the matching interaction as a sub-interaction_tree relative to this interaction tree
-      interaction_tree_ptr subtree = create(
-        matching_interaction,
-        others,
-        energy_threshold,
-        generation+1,
-        verbose
-      );
+      interaction_tree_ptr subtree =
+        create(interaction, others, energy_threshold, generation+1, verbose);
 
       // add this interaction as precursor of the subtree
       subtree->m_precursor_interaction = tree;
 
       // add the subtree as a secondary interaction to this
       tree->m_secondary_interactions.emplace_back(subtree);
-    } // loop over particles in the interaction
+    }
 
     // return the newly created tree
     return tree;
