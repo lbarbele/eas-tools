@@ -53,6 +53,12 @@ namespace corsika {
     const subblock& get_trailer() const
     {return m_trailer;}
 
+    auto get_n_showers() const
+    {return m_showers.size();}
+
+    const shower& get_shower(const std::size_t i) const
+    {return m_showers.at(i);}
+
     auto begin(){return m_showers.begin();}
     auto cbegin() const {return m_showers.cbegin();}
     auto rbegin() {return m_showers.rbegin();}
