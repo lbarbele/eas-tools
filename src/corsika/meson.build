@@ -3,7 +3,6 @@ corsika_sources = [
   'binarystream.cpp',
   'binarystream.iterator.cpp',
   'subblock.cpp',
-  'binaryfile.cpp',
   'shower.cpp',
   'particle.cpp',
   'particle_iterator.cpp',
