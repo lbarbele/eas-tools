@@ -88,7 +88,7 @@ namespace conex::extensions {
       if (verbose) {
         std::cerr
           << std::left
-          << "+ searching "
+          << ". searching "
           << "(id) " << std::setw(5) << current_particle->get_id()
           << " (E) " << std::setw(15) << current_particle->get_energy()
           << " (p) " << std::setw(15) << current_particle->get_momentum().on_frame(util::frame::conex_observer)
@@ -137,6 +137,14 @@ namespace conex::extensions {
       }
 
     } // loop over particles in the interaction
+
+    // print statistics
+    if (verbose) {
+      std::cerr << "+ " << matches.size() << " particle matches" << std::endl;
+      std::cerr << "+ " << tree->m_products.size() << " final products" << std::endl;
+      std::cerr << "+ " << source->get_multiplicity()-matches.size()-tree->m_products.size() << " discarded" << std::endl;
+      std::cerr << "+ " << others.size() << " interactions remaining" << std::endl;
+    }
 
     // loop over matches and create the subtrees
     for (const auto& [particle, interaction] : matches) {
