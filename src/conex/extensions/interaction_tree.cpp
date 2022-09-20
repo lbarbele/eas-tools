@@ -63,6 +63,7 @@ namespace conex::extensions {
     interaction_tree_ptr tree(new interaction_tree);
     tree->m_interaction = source;
     tree->m_energy_threshold = energy_threshold;
+    tree->m_lost_energy = units::energy_t(0);
     tree->m_generation = generation;
  
     // create a (empty) list of matching interactions
@@ -73,6 +74,7 @@ namespace conex::extensions {
 
       // dismiss particles with low kinectic energy (say, 10 MeV)
       if (current_particle->get_energy() - (current_particle->get_mass()*1_c*1_c) < 10_MeV) {
+        tree->m_lost_energy += current_particle->get_energy();
         continue;
       }
 
@@ -88,7 +90,7 @@ namespace conex::extensions {
       if (verbose) {
         std::cerr
           << std::left
-          << ". searching "
+          << "- searching "
           << "(id) " << std::setw(5) << current_particle->get_id()
           << " (E) " << std::setw(15) << current_particle->get_energy()
           << " (p) " << std::setw(15) << current_particle->get_momentum().on_frame(util::frame::conex_observer)
@@ -103,6 +105,7 @@ namespace conex::extensions {
       for (const interaction_ptr& interaction : others) {
         if (current_particle->get_unique_id() == interaction->get_projectile()->get_unique_id()) {
           matching_interaction = interaction;
+          tree->m_lost_energy += current_particle->get_energy() - interaction->get_projectile()->get_energy();
           break;
         }
       }
@@ -140,10 +143,11 @@ namespace conex::extensions {
 
     // print statistics
     if (verbose) {
-      std::cerr << "+ " << matches.size() << " particle matches" << std::endl;
-      std::cerr << "+ " << tree->m_products.size() << " final products" << std::endl;
-      std::cerr << "+ " << source->get_multiplicity()-matches.size()-tree->m_products.size() << " discarded" << std::endl;
-      std::cerr << "+ " << others.size() << " interactions remaining" << std::endl;
+      std::cerr << ". " << matches.size() << " particle matches" << std::endl;
+      std::cerr << ". " << tree->m_products.size() << " final products" << std::endl;
+      std::cerr << ". " << source->get_multiplicity()-matches.size()-tree->m_products.size() << " discarded" << std::endl;
+      std::cerr << ". " << others.size() << " interactions remaining" << std::endl;
+      std::cerr << ". energy loss was " << tree->m_lost_energy << std::endl;
     }
 
     // loop over matches and create the subtrees

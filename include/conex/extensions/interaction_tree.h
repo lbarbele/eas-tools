@@ -24,6 +24,7 @@ namespace conex::extensions {
     interaction_tree_ptr m_precursor_interaction;
 
     units::energy_t m_energy_threshold;
+    units::energy_t m_lost_energy;
     int m_generation;
 
     interaction_tree() {}
@@ -62,6 +63,9 @@ namespace conex::extensions {
 
     const interaction_tree_ptr& get_precursor() const
     {return m_precursor_interaction;}
+
+    const units::energy_t& get_energy_loss() const
+    {return m_lost_energy;}
 
     // - Methods
 
