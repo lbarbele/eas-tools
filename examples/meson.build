@@ -3,7 +3,8 @@ example_progs = [
   'parametrize_conex_profiles',
   'plot_conex_profiles',
   'plot_corsika_profiles',
-  'plot_coreas_data'
+  'plot_coreas_data',
+  'plot_lateral_distribution'
 ]
 
 foreach name : example_progs
