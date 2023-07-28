@@ -33,12 +33,12 @@ namespace models::atmosphere {
     {
       m_nlayers = 5;
 
-      m_a = {-186.555305_gcm2, -94.919_gcm2, 0.61289_gcm2, 0.0_gcm2, 0.01128292_gcm2};
-      m_b = {1222.6562_gcm2, 1144.9069_gcm2, 1305.5948_gcm2, 540.1778_gcm2, 1_gcm2};
-      m_c = {994186.38_cm, 878153.55_cm, 636143.04_cm, 772170.16_cm, 1e9_cm};
+      m_a = {-186.5562_gcm2,   -94.919_gcm2,   0.61289_gcm2,      0.0_gcm2, 0.01128292_gcm2};
+      m_b = {1222.6562_gcm2, 1144.9069_gcm2, 1305.5948_gcm2, 540.1778_gcm2,          1_gcm2};
+      m_c = {   9941.8638_m,    8781.5355_m,    6361.4304_m,   7721.7016_m,           1e7_m};
 
       m_height_boundaries = {0_m, 4e3_m, 1e4_m, 4e4_m, 1e5_m, 1.128292e5_m};
-      m_depth_boundaries = {1.036101e3_gcm2, 6.311009e2_gcm2, 2.717009e2_gcm2, 3.039560_gcm2, 1.282922e-3_gcm2, 0_gcm2};
+      m_depth_boundaries = {1036.101_gcm2, 631.1_gcm2, 271.7_gcm2, 3.0396_gcm2, 0.00128292_gcm2, 0_gcm2};
     }
 
     units::length_t max_height() const
@@ -133,6 +133,7 @@ namespace models::atmosphere {
         return units::density_t(0);
       }
 
+
       const int ilayer = get_layer_index(h);
       return (ilayer < m_nlayers-1)?
         (m_b[ilayer] / m_c[ilayer]) * std::exp(-h/m_c[ilayer]) : 
@@ -169,83 +170,26 @@ namespace models::atmosphere {
       const util::point_t<units::length_t>& b
     ) const
     {
-      // point at earth's center
-      static const util::point_t<units::length_t> earth_center(0_m, 0_m, -util::constants::earth_radius, util::frame::standard);
+      const auto rea = util::constants::earth_radius;
+      const auto std_frame = util::frame::standard;
 
       // separation vector
       const util::vector_t<units::length_t> separation = b - a;
 
-      // position vectors with origin at the earth's center
-      const auto ra = a - earth_center;
-      const auto rb = b - earth_center;
+      // position vector with origin at the earth's center
+      const auto ra = a - util::point_t<units::length_t>({0_m, 0_m, -rea}, std_frame);
 
-      // ensure integration path goes upwards
-      const double cos_alpha = util::cos_angle(ra, separation);
-      const double sin_alpha = std::sqrt((1+cos_alpha)*(1-cos_alpha));
-
-      if (cos_alpha < 0) {
-        // integration goes downwards, so check if there is a change of sign in cos_theta along the trajectory
-        const units::length_t s_cross = - ra.norm() * cos_alpha;
-
-        if (separation.norm() > s_cross) {
-          // signal of cos_theta changes, so we split the integral in two parts
-          const double f = s_cross / separation.norm();
-          const util::point_t<units::length_t> cross_point_a = a + (1 - 1e-10) * f * separation;
-          const util::point_t<units::length_t> cross_point_b = a + (1 + 1e-10) * f * separation;
-          return get_traversed_mass(cross_point_a, a) + get_traversed_mass(cross_point_b, b);
-        } else {
-          // no change of signal in cos_theta, simply invert points
-          return get_traversed_mass(b, a);
-        }
-      }
-
-      // compute initial/final heights (in meters !)
-      const units::length_t ha = ra.norm() - util::constants::earth_radius;
-      const units::length_t hb = rb.norm() - util::constants::earth_radius;
-
-      // get layer indices
-      const auto ia = get_layer_index(ha);
-      const auto ib = get_layer_index(hb);
-
-      if (ia != ib) {
-        // if integration path crosses layer boundaries, split the integral
-        const units::length_t h_cross = m_height_boundaries[ia+1];
-        const units::length_t r_cross = h_cross + util::constants::earth_radius;
-        const units::length_t s_cross = util::math::sqrt((r_cross + ra.norm()*sin_alpha)*(r_cross - ra.norm()*sin_alpha)) - ra.norm()*cos_alpha;
-        const double f = s_cross / separation.norm();
-        const auto cross_point_a = a + (1 - 1e-10) * f * separation;
-        const auto cross_point_b = a + (1 + 1e-10) * f * separation;
-        return get_traversed_mass(a, cross_point_a) + get_traversed_mass(cross_point_b, b);
-      }
-
-      // here, we have a trajectory that goes upwards and does not cross any layer boundary
-      const auto ilayer = ia;
-
-      if (ilayer < m_nlayers-1) {
-        const units::length_t catm = m_c[ilayer];
-
-        const double lower = std::exp(-hb/catm);
-        const double upper = std::exp(-ha/catm);
-        const double tolerance = 1e-5;
-
-        const units::length_t r0 = ra.cross_product(rb).norm() / separation.norm();
-
-        const auto integrand = [=](const double u){
-          const units::length_t r = util::constants::earth_radius - std::log(u) * catm;
-          const double x = r0/r;
-          return 1.0/std::sqrt((1+x)*(1-x));
-        };
-
-        return m_b[ilayer] * util::math::romberg_integral(lower, upper, tolerance, integrand);
-      } else {
-        return separation.norm() * m_b[ilayer] / m_c[ilayer];
-      }
+      return separation.norm()*util::math::romberg_integral(0., 1., 1e-7, [=](const double x) {
+        const auto r = ra + x*separation;
+        const auto h = r.norm() - rea;
+        return get_density(h);
+      });
     }
 
     // * traversed length
     template <util::concepts::scalar U>
     util::point_t<units::length_t>
-    propagate(
+    transport(
       const util::point_t<units::length_t>& initial_point,
       const util::vector_t<U>& direction_input,
       const units::depth_t traversed_mass
