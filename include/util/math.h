@@ -3,7 +3,9 @@
 
 #include <array>
 #include <cmath>
+#include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <units/math.h>
 
@@ -88,22 +90,21 @@ namespace util::math {
     return ninflec;
   }
 
-	template<class Function>
-	double
+	template<class Function, class T, class R = decltype(T{}*std::declval<Function>()(T{}))>
+	R
 	romberg_integral (
-    const double a,
-    const double b,
+    const T a,
+    const T b,
     const double eps, 
     Function function
   ) {
 		constexpr int max_it = 30;
 		
-		std::array<double, max_it> v = {0.0};
-		
-		double step = b-a;
+		T step = b-a;
+		std::array<R, max_it> v;
 		v[0] = 0.5*step*(function(a) + function(b));
 		
-		double value_before = v[0];
+		R value_before = v[0];
 		int n_steps = 1;
 		
 		for (int k = 1; k < max_it; k++) {
@@ -117,13 +118,13 @@ namespace util::math {
 			for (int j = k-1; j >= 0; j--)
 				v[j] = v[j+1] + (v[j+1] - v[j]) / (std::pow(4,k-j) - 1.0);
 			
-			if (std::fabs(value_before - v[0]) < eps)
+			if (std::fabs((value_before - v[0])/value_before) < eps)
 				return v[0];
 			else
 				value_before = v[0];
 		}
 		
-		return -1;
+		throw std::runtime_error("romberg integration failed");
 	}
 
 } // namespace util::math
