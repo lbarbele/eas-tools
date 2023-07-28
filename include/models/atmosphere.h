@@ -37,13 +37,15 @@ namespace models::atmosphere {
       m_b = {1222.6562_gcm2, 1144.9069_gcm2, 1305.5948_gcm2, 540.1778_gcm2, 1_gcm2};
       m_c = {994186.38_cm, 878153.55_cm, 636143.04_cm, 772170.16_cm, 1e9_cm};
 
-      m_height_boundaries = {0._m, 4e3_m, 1e4_m, 4e4_m, 1e5_m, 1.128292e5_m};
-
-      m_depth_boundaries.resize(m_height_boundaries.size());
-      for (int i = 0; i < m_nlayers; ++i) {
-        m_depth_boundaries[i] = get_depth(m_height_boundaries[i]);
-      }
+      m_height_boundaries = {0_m, 4e3_m, 1e4_m, 4e4_m, 1e5_m, 1.128292e5_m};
+      m_depth_boundaries = {1.036101e3_gcm2, 6.311009e2_gcm2, 2.717009e2_gcm2, 3.039560_gcm2, 1.282922e-3_gcm2, 0_gcm2};
     }
+
+    units::length_t max_height() const
+    {return m_height_boundaries.back();}
+
+    units::depth_t max_depth() const
+    {return m_depth_boundaries.front();}
 
     // * get index of atmopsheric layer correspoding to given height
     int
@@ -99,6 +101,10 @@ namespace models::atmosphere {
       const units::length_t h
     ) const
     {
+      if (h > max_height()) {
+        return units::depth_t(0);
+      }
+
       const int ilayer = get_layer_index(h);
       return (ilayer < m_nlayers-1) ?
         m_a[ilayer] + m_b[ilayer] * std::exp(-h/m_c[ilayer]) :
@@ -123,6 +129,10 @@ namespace models::atmosphere {
       const units::length_t h
     ) const
     {
+      if (h > max_height()) {
+        return units::density_t(0);
+      }
+
       const int ilayer = get_layer_index(h);
       return (ilayer < m_nlayers-1)?
         (m_b[ilayer] / m_c[ilayer]) * std::exp(-h/m_c[ilayer]) : 
@@ -169,9 +179,9 @@ namespace models::atmosphere {
       const auto ra = a - earth_center;
       const auto rb = b - earth_center;
 
-      // check if integration path goes upwards
+      // ensure integration path goes upwards
       const double cos_alpha = util::cos_angle(ra, separation);
-      double sin_alpha = std::sqrt((1+cos_alpha)*(1-cos_alpha));
+      const double sin_alpha = std::sqrt((1+cos_alpha)*(1-cos_alpha));
 
       if (cos_alpha < 0) {
         // integration goes downwards, so check if there is a change of sign in cos_theta along the trajectory
@@ -212,11 +222,12 @@ namespace models::atmosphere {
       const auto ilayer = ia;
 
       if (ilayer < m_nlayers-1) {
-        const double lower = std::exp(-hb/m_c[ilayer]);
-        const double upper = std::exp(-ha/m_c[ilayer]);
-        const double tolerance = 1e-8;
-
         const units::length_t catm = m_c[ilayer];
+
+        const double lower = std::exp(-hb/catm);
+        const double upper = std::exp(-ha/catm);
+        const double tolerance = 1e-5;
+
         const units::length_t r0 = ra.cross_product(rb).norm() / separation.norm();
 
         const auto integrand = [=](const double u){
