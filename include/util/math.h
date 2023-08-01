@@ -3,9 +3,12 @@
 
 #include <array>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <type_traits>
 
 #include <units/math.h>
 
@@ -90,20 +93,21 @@ namespace util::math {
     return ninflec;
   }
 
-	template<class Function, class T, class R = decltype(T{}*std::declval<Function>()(T{}))>
+	template<class F, class T, class... Ts, class R = decltype(T{}*std::declval<F>()(T{}, Ts{}...))>
 	R
 	romberg_integral (
     const T a,
     const T b,
     const double eps, 
-    Function function
+    F function,
+    Ts... params
   ) {
 		constexpr int max_it = 30;
-		
-		T step = b-a;
-		std::array<R, max_it> v;
-		v[0] = 0.5*step*(function(a) + function(b));
-		
+
+		T step = b - a;
+    std::array<R, max_it> v;
+		v[0] = 0.5*step*(function(a, params...) + function(b, params...));
+
 		R value_before = v[0];
 		int n_steps = 1;
 		
@@ -111,8 +115,9 @@ namespace util::math {
 			n_steps *= 2;
 			step /= 2.0;
 			
+      v[k] = R(0.);
 			for (int i = 1; i < n_steps; i+=2)
-				v[k] += function(a + i*step);
+				v[k] += function(a + i*step, params...);
 			v[k] = v[k]*step + 0.5*v[k-1];
 			
 			for (int j = k-1; j >= 0; j--)
