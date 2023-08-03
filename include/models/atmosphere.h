@@ -1,11 +1,13 @@
 #ifndef _models_atmosphere_h
 #define _models_atmosphere_h
 
+#include <array>
 #include <cmath>
-#include <vector>
+#include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string_view>
-#include <ostream>
+#include <vector>
 
 #include <util/math.h>
 #include <util/point.h>
@@ -19,151 +21,237 @@ namespace models::atmosphere {
   using namespace units::literals;
 
   class us_standard {
-  public:
-    int m_nlayers;
-    std::vector<units::depth_t> m_a;
-    std::vector<units::depth_t> m_b;
-    std::vector<units::length_t> m_c;
-    std::vector<units::length_t> m_height_boundaries;
-    std::vector<units::depth_t> m_depth_boundaries;
+  private:
 
-  public:
+    struct layer {
+      enum type {
+        linear,
+        exponential
+      };
 
-    us_standard()
-    {
-      m_nlayers = 5;
+      const uint id;
+      const units::depth_t a;
+      const units::depth_t b;
+      const units::length_t c;
+      const units::length_t min_height;
+      const units::length_t max_height;
+      const units::depth_t min_depth;
+      const units::depth_t max_depth;
+      const type shape;
+    };
 
-      m_a = {-186.5562_gcm2,   -94.919_gcm2,   0.61289_gcm2,      0.0_gcm2, 0.01128292_gcm2};
-      m_b = {1222.6562_gcm2, 1144.9069_gcm2, 1305.5948_gcm2, 540.1778_gcm2,          1_gcm2};
-      m_c = {   9941.8638_m,    8781.5355_m,    6361.4304_m,   7721.7016_m,           1e7_m};
+    const std::array<layer, 5> m_layers = {
+      //    id,               a,              b,           c,  hlow,          hup,            xlow,             xup, type
+      layer{1u,  -186.5562_gcm2, 1222.6562_gcm2, 9941.8638_m,   0_m,        4e3_m,      631.1_gcm2,   1036.101_gcm2, layer::exponential},
+      layer{2u,    -94.919_gcm2, 1144.9069_gcm2, 8781.5355_m, 4e3_m,        1e4_m,      271.7_gcm2,      631.1_gcm2, layer::exponential},
+      layer{3u,    0.61289_gcm2, 1305.5948_gcm2, 6361.4304_m, 1e4_m,        4e4_m,     3.0396_gcm2,      271.7_gcm2, layer::exponential},
+      layer{4u,        0.0_gcm2,  540.1778_gcm2, 7721.7016_m, 4e4_m,        1e5_m, 0.00128292_gcm2,     3.0396_gcm2, layer::exponential},
+      layer{5u, 0.01128292_gcm2,       1.0_gcm2,       1e7_m, 1e5_m, 1.128292e5_m,          0_gcm2, 0.00128292_gcm2, layer::linear}
+    };
 
-      m_height_boundaries = {0_m, 4e3_m, 1e4_m, 4e4_m, 1e5_m, 1.128292e5_m};
-      m_depth_boundaries = {1036.101_gcm2, 631.1_gcm2, 271.7_gcm2, 3.0396_gcm2, 0.00128292_gcm2, 0_gcm2};
-    }
+    // * implementation of get_traversed mass
 
-    units::length_t max_height() const
-    {return m_height_boundaries.back();}
-
-    units::depth_t max_depth() const
-    {return m_depth_boundaries.front();}
-
-    // * get index of atmopsheric layer correspoding to given height
-    int
-    get_layer_index(
-      units::length_t height
+    units::depth_t
+    do_get_traversed_mass(
+      const units::length_t xa,
+      const units::length_t xb,
+      const units::length_t y
     ) const
     {
-      if (height < m_height_boundaries.front()) {
-        throw std::logic_error("height below boundary");
-      }
+      const auto rea = util::constants::earth_radius;
 
-      if (height > m_height_boundaries.back()) {
-        throw std::logic_error("height above boundary");
-      }
+      const auto height = [=](const auto x){
+        return util::math::hypot(x, y) - rea;
+      };
 
-      for (int ilayer = 0; ilayer < m_nlayers; ++ilayer) {
-        if (height <= m_height_boundaries[ilayer+1]) {
-          return ilayer;
+      // the returning value
+      units::depth_t traversed_mass(0.);
+
+      // loop over layers
+      const auto ia = get_layer(height(xa)).id;
+      const auto ib = get_layer(height(xb)).id;
+
+      const auto integrand = [=](const double u, const units::length_t c){
+        const auto st = y/(rea - c*std::log(u));
+        const auto ct = util::math::sqrt((1+st)*(1-st));
+        return 1.0/ct;
+      };
+
+      for (uint idlay = ia; idlay <= ib; ++idlay) {
+        const auto l = get_layer(idlay);
+
+        const auto rl = rea + l.min_height;
+        const auto ru = rea + l.max_height;
+
+        const auto xl = idlay == ia ? xa : util::math::sqrt((rl+y)*(rl-y));
+        const auto xu = idlay == ib ? xb : util::math::sqrt((ru+y)*(ru-y));
+
+        if (l.shape == layer::linear) {
+          traversed_mass += (xu - xl)*(l.b/l.c);
+        } else {
+          const auto lower = util::math::exp(-height(xu)/l.c);
+          const auto upper = util::math::exp(-height(xl)/l.c);
+
+          traversed_mass += l.b * util::math::romberg_integral(lower, upper, 1e-8, integrand, l.c);
         }
       }
 
-      // if here, there is some problem in m_height_boundaries
-      throw std::logic_error("unable to find atmosphere layer from height");
+      return traversed_mass;
     }
 
-    // * same as above, but for given height
-    int
-    get_layer_index(
+    // * determine the atmospheric layer corresponding to height, depth, or position
+
+    const layer&
+    get_layer(
+      const unsigned int id
+    ) const
+    {
+      for (const auto& layer : m_layers) {
+        if (layer.id == id) {
+          return layer;
+        }
+      }
+
+      throw std::runtime_error("unable to find atmosphere layer from id");
+    }
+
+    const layer&
+    get_layer(
+      const units::length_t height
+    ) const
+    {
+      if (height == max_height()) {
+        return m_layers.back();
+      }
+
+      for (const auto& layer : m_layers) {
+        if (layer.min_height <= height && height < layer.max_height) {
+          return layer;
+        }
+      }
+
+      throw std::runtime_error("unable to find atmosphere layer from height");
+    }
+
+    const layer&
+    get_layer(
       const units::depth_t depth
     ) const
     {
-      if (depth < m_depth_boundaries.back()) {
-        throw std::logic_error("depth below boundary");
+      if (depth == min_depth()) {
+        return m_layers.back();
       }
 
-      if (depth > m_depth_boundaries.front()) {
-        throw std::logic_error("depth above boundary");
-      }
-
-      for (int ilayer = 0; ilayer < m_nlayers; ++ilayer) {
-        if (depth >= m_depth_boundaries[ilayer+1]) {
-          return ilayer;
+      for (const auto& layer : m_layers) {
+        if (layer.min_depth < depth && depth <= layer.max_depth) {
+          return layer;
         }
       }
 
-      // if here, there is some problem in m_height_boundaries
-      throw std::logic_error("unable to find atmosphere layer from depth");
+      throw std::runtime_error("unable to find atmosphere layer from depth");
     }
+
+    const layer& get_layer(const util::point_t<units::length_t>& position) const
+    {return get_layer(get_height(position));}
+
+  public:
+
+    // * atmosphere boundaries
+
+    units::length_t max_height() const
+    {return m_layers.back().max_height;}
+
+    units::length_t min_height() const
+    {return m_layers.front().min_height;}
+
+    units::depth_t min_depth() const
+    {return m_layers.back().min_depth;}
+
+    units::depth_t max_depth() const
+    {return m_layers.front().max_depth;}
     
-    // * vertical mass overburden as a function of height
+    // * compute vertical mass overburden at position
+
     units::depth_t
     get_depth(
-      const units::length_t h
+      const units::length_t height
     ) const
     {
-      if (h > max_height()) {
+      if (height >= max_height()) {
         return units::depth_t(0);
       }
 
-      const int ilayer = get_layer_index(h);
-      return (ilayer < m_nlayers-1) ?
-        m_a[ilayer] + m_b[ilayer] * std::exp(-h/m_c[ilayer]) :
-        m_a[ilayer] - m_b[ilayer]*(h/m_c[ilayer]);
+      const auto& l = get_layer(height);
+
+      return l.shape == layer::exponential ? 
+        l.a + l.b * util::math::exp(-height/l.c) :
+        l.a - l.b * height / l.c;
     }
 
-    // * compute height given vertical mass overburden
+    units::depth_t get_depth(const util::point_t<units::length_t>& position) const
+    {return get_depth(get_height(position));}
+
+    // * compute height at given position
+
     units::length_t
     get_height(
       const units::depth_t depth
     ) const
     {
-      const int ilayer = get_layer_index(depth);
-      return (ilayer < m_nlayers-1) ?
-        m_c[ilayer] * std::log(m_b[ilayer]/(depth-m_a[ilayer])) :
-        m_c[ilayer] * ((m_a[ilayer] - depth) / m_b[ilayer]);
+      const auto& l = get_layer(depth);
+
+      const auto h = l.shape == layer::exponential ? 
+        l.c * std::log(l.b / (depth - l.a)) :
+        l.c * (l.a - depth) / l.b;
+
+      return util::math::max(0_m, h);
     }
 
-    // * air density as a function of height
-    units::density_t
-    get_density(
-      const units::length_t h
+    units::length_t
+    get_height(
+      const util::point_t<units::length_t>& position 
     ) const
     {
-      if (h > max_height()) {
-        return units::density_t(0);
-      }
-
-
-      const int ilayer = get_layer_index(h);
-      return (ilayer < m_nlayers-1)?
-        (m_b[ilayer] / m_c[ilayer]) * std::exp(-h/m_c[ilayer]) : 
-        (m_b[ilayer] / m_c[ilayer]);
+      const auto earth_radius = util::constants::earth_radius;
+      const auto earth_center = util::point_t<units::length_t>(0_m, 0_m, -earth_radius, util::frame::standard);
+      return (position - earth_center).norm() - earth_radius;
     }
 
-    // * air density as a function of depth
+    // * compute air density at the given position
+
+    units::density_t
+    get_density(
+      const units::length_t height
+    ) const
+    {
+      if (height >= max_height()) {
+        return units::density_t(0.);
+      }
+
+      const auto& l = get_layer(height);
+
+      return l.shape == layer::exponential ?
+        (l.b/l.c) * util::math::exp(-height/l.c) :
+        (l.b/l.c);
+    }
+
     units::density_t
     get_density(
       const units::depth_t depth
     ) const
     {
-      const int ilayer = get_layer_index(depth);
-      return (ilayer < m_nlayers-1)?
-        (depth - m_a[ilayer])/m_c[ilayer] :
-        m_b[ilayer]/m_c[ilayer];
+      const auto& l = get_layer(depth);
+
+      return l.shape == layer::exponential ?
+        (depth - l.a)/l.c :
+        l.b/l.c;
     }
 
-    // * air density at given point
-    units::density_t
-    get_density(
-      const util::point_t<units::length_t>& p
-    ) const
-    {
-      static const util::point_t<units::length_t> c(0_m, 0_m, -util::constants::earth_radius, util::frame::standard);
-      const units::length_t height((p-c).norm() - util::constants::earth_radius);
-      return get_density(height);
-    }
+    units::density_t get_density(const util::point_t<units::length_t>& pos) const
+    {return get_density(get_height(pos));}
 
     // * traversed mass between two points
+
     units::depth_t
     get_traversed_mass(
       const util::point_t<units::length_t>& a,
@@ -171,82 +259,125 @@ namespace models::atmosphere {
     ) const
     {
       const auto rea = util::constants::earth_radius;
-      const auto std_frame = util::frame::standard;
+      const auto rmx = rea + max_height() - 1_mm;
+      const auto cnt = util::point_t<units::length_t>(0_m, 0_m, -rea, util::frame::standard);
 
-      // separation vector
-      const util::vector_t<units::length_t> separation = b - a;
+      // separation vector (norm and direction)
+      const auto dir = (b - a).get_normalized(1.);
 
-      // position vector with origin at the earth's center
-      const auto ra = a - util::point_t<units::length_t>({0_m, 0_m, -rea}, std_frame);
+      // position vectors wrt to earth center
+      const auto ra = a - cnt;
+      const auto rb = b - cnt;
 
-      return separation.norm()*util::math::romberg_integral(0., 1., 1e-7, [=](const double x) {
-        const auto r = ra + x*separation;
-        const auto h = r.norm() - rea;
-        return get_density(h);
-      });
+      // impact radius
+      const auto y = dir.cross_product(ra).norm();
+
+      // positions along the integration direction
+      const auto xm = util::math::sqrt((rmx+y)*(rmx-y));
+      const auto xa = util::math::max(ra*dir, -xm);
+      const auto xb = util::math::min(rb*dir, +xm);
+
+      if (xa >= xm || xb <= -xm) {
+        return units::depth_t(0.);
+      } else if (xb < util::math::max(0_m, -xa)) {
+        return do_get_traversed_mass(-xb, -xa, y);
+      } else if (xa < 0_m) {
+        return 2*do_get_traversed_mass(0_m, -xa, y) + do_get_traversed_mass(-xa, xb, y);
+      } else {
+        return do_get_traversed_mass(xa, xb, y);
+      }
     }
 
-    // * traversed length
+    // * compute slant depth along axis
+
+    template <util::concepts::scalar U>
+    units::depth_t
+    get_slant_depth(
+      const util::vector_t<U>& input_axis,
+      const units::length_t distance
+    ) const
+    {
+      // the integration axis and its sine/cosine directions
+      const auto axis = input_axis.get_normalized(1.);
+      const auto cosa = axis.z();
+      const auto sina = util::math::hypot(axis.x(), axis.y());
+
+      // the linear layer
+      const auto l = m_layers.back();
+
+      // the distance from ground to atmosphere boundary along the axis
+      const auto rear = util::constants::earth_radius;
+      // const auto rmax = rear + max_height();
+      const auto rmax = rear + l.min_height;
+      const auto dmax = util::math::sqrt((rmax+rear*sina)*(rmax-rear*sina)) - rear*cosa;
+
+      // initial and final positions for integration
+      const auto grnd = util::point_t<units::length_t>(0_m, 0_m, 0_m, util::frame::standard);
+      const auto pini = grnd + axis*dmax;
+      const auto pend = grnd + axis*distance;
+
+      return l.max_depth + get_traversed_mass(pini, pend);
+    }
+
+    // * compute traversed length in given direction
+
     template <util::concepts::scalar U>
     util::point_t<units::length_t>
     transport(
-      const util::point_t<units::length_t>& initial_point,
-      const util::vector_t<U>& direction_input,
-      const units::depth_t traversed_mass
+      const util::point_t<units::length_t>& initial_position,
+      const util::vector_t<U>& input_direction,
+      const units::depth_t& depth_interval,
+      const units::length_t tolerance = 1_nm
     ) const
     {
-      // * constants, input conversions, and helpers
-      
-      // point at earth's center
-      static const util::point_t<units::length_t> earth_center(0_m, 0_m, -util::constants::earth_radius, util::frame::standard);
+      const auto rea = util::constants::earth_radius;
+      const auto earth_center = util::point_t<units::length_t>(0_m, 0_m, -rea, util::frame::standard);
 
-      // parameters for the newton method below
-      const units::length_t tolerance = 1_um; // 1 micrometer
-      const unsigned max_iterations = 100;
+      auto direction = input_direction.get_normalized(1.);
+      auto position = initial_position;
+      auto dX = depth_interval;
 
-      // normalize the direction and make it dimensionless
-      const util::vector_d direction = direction_input.get_normalized(1);
+      for (uint iter = 0; iter < 100; ++iter) {
+        const auto cosine = util::cos_angle(position - earth_center, direction);
 
-      // * first approximation: assume X_slant = X_vertical / cos_theta
+        // * compute approximation to displacement corresponding to dX
 
-      // position vector (with origin at Earth's center)
-      const util::vector_t<units::length_t> position_vector = initial_point - earth_center;
+        units::length_t displacement = 0_m;
 
-      // inclination of the trajectory (measured downwards!)
-      const double cos_theta = -util::cos_angle(position_vector, direction);
+        if (util::math::abs(cosine) < 1e-2) {
+          // case 1: (almost) horizontal displacement
+          displacement = dX/get_density(position);
+        } else {
+          // case 2: non-horizontal displacement
+          const auto initial_depth = get_depth(position);
+          const auto final_depth = util::math::max(initial_depth - dX*cosine, min_depth());
 
-      // initial altitude and depth
-      const units::length_t starting_altitude = position_vector.norm() - util::constants::earth_radius;
-      const units::depth_t starting_vertical_depth = get_depth(starting_altitude);
+          const auto initial_height = get_height(position);
+          const auto final_height = get_height(final_depth);
+          displacement = (final_height - initial_height) / cosine;
+        }
 
-      // approximation to ending depth/altitude
-      const units::depth_t ending_vertical_depth = starting_vertical_depth + traversed_mass * cos_theta;
-      const units::length_t ending_altitude = get_height(ending_vertical_depth);
+        // * update position and depth interval
 
-      // approximated displacement
-      units::length_t displacement = (starting_altitude - ending_altitude) / cos_theta;
+        // update position
+        const auto previous_position = position;
+        position += displacement*direction;
 
-      // ending point
-      util::point_t<units::length_t> ending_point = initial_point + displacement * direction;
+        // if displacement is smaller than tolerance, we are done
+        if (util::math::abs(displacement) < tolerance) {
+          return position;
+        }
 
-      // * improve the solution using newton's method
+        // update depth interval
+        dX -= get_traversed_mass(position, previous_position);
 
-      // loop up to max_iterations to find a valid solution
-      for (unsigned i = 0; i < max_iterations; ++i) {
-        // compute current step in the displacement (s), with change = (X(s) - X0) / X'(s), and X'(s) = rho(s)
-        const units::length_t change = (get_traversed_mass(initial_point, ending_point) - traversed_mass) / get_density(ending_point);
-        // compute new displacement
-        displacement -= change;
-        // compute new estimated ending point
-        ending_point = initial_point + displacement * direction;
-        // if change is below tolerance, we are done
-        if (util::math::abs(change) < tolerance) {
-          return ending_point;
+        if (dX < 0_gcm2) {
+          dX = -dX;
+          direction = -direction;
         }
       }
 
-      std::cerr << "unable to reach desired precision" << std::endl;
-      throw;
+      throw std::runtime_error("atm transport was unable to reach the desired precision");
     }
 
   };
