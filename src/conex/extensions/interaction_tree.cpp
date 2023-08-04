@@ -167,4 +167,263 @@ namespace conex::extensions {
     return tree;
   }
 
+  interaction_tree_ptr
+  interaction_tree::transform(
+    const units::angle_t new_zenith,
+    const units::length_t new_observation_level
+  ) const
+  {
+    // * the transformation is always applied to the head of the tree
+
+    if (get_precursor() != nullptr) {
+      return get_precursor()->transform(new_zenith, new_observation_level);
+    }
+
+    // * helpers
+
+    using namespace units::literals;
+    const auto rea = util::constants::earth_radius;
+    const auto atm = models::atmosphere::us_standard();
+    const auto conex_observer = util::frame::conex_observer;
+
+    // * a container for the frames
+
+    transformation_frames frames;
+
+    // * define the old shower frame
+
+    const auto old_projectile = get_interaction()->get_projectile();
+    const auto old_momentum = old_projectile->get_momentum();
+    const auto old_axis = -old_momentum.get_normalized(1.).on_frame(conex_observer);
+
+    const auto old_theta = util::math::acos(old_axis.z());
+    const auto old_phi = util::math::atan2(old_axis.y(), old_axis.x());
+
+    // the shower frame is defined such that the direction of the primary-particle momentum
+    // coincides with the z axis (points downwards). the y axis is such that its projection
+    // on the ground coincides with the projection of the primary particle momentum.
+    // the origin of this frame is also displaced to an altitude given by the observation
+    // level.
+    frames.shower_old = util::frame::create(
+      (util::axis::x, 1_pi - old_theta)* // 2: align z axis with the shower axis such that z points downwards
+      (util::axis::z, old_phi - 0.5_pi), // 1: align y axis with projection of shower axis on ground
+      conex_observer
+    );
+
+    // * define the new observer frame
+
+    const auto new_obs_point = util::point_t<units::length_t>(0_m, 0_m, new_observation_level, conex_observer);
+    frames.observer_new = util::frame::create(new_obs_point, conex_observer);
+
+    // * define the new shower frame
+
+    // new angles of the shower axis and sines/cosines
+    const auto new_theta = new_zenith;
+    const auto new_phi = old_phi;
+
+    const auto new_sin_theta = util::math::sin(new_theta);
+    const auto new_cos_theta = util::math::cos(new_theta);
+
+    frames.shower_new = util::frame::create(
+      (util::axis::x, 1_pi - new_theta)* // 2: align z axis with the shower axis such that z points downwards
+      (util::axis::z, new_phi - 0.5_pi), // 1: align y axis with projection of shower axis on ground
+      frames.observer_new
+    );
+
+    // * define the new initial position
+
+    // distance from earth center to the border of the atmosphere
+    const auto rmax = rea + atm.max_height();
+    // distance from earth center to the observation level
+    const auto robs = rea + new_observation_level;
+    // helper variables
+    const auto xobs = robs * new_cos_theta;
+    const auto yobs = robs * new_sin_theta;
+    // distance from observation point to atm. border along new shower axis
+    const auto new_max_distance = util::math::sqrt((rmax + yobs)*(rmax - yobs)) - xobs;
+    // the new initial position is the intercept between shower axis and atmosphere boundary
+    const auto new_initial_position = util::point_t<units::length_t>(0_m, 0_m, -new_max_distance, frames.shower_new);
+
+    // * apply transformation
+
+    const auto traversed_mass = old_projectile->get_slant_depth();
+
+    return do_transform(frames, new_initial_position, 0_s, traversed_mass);
+  }
+
+  interaction_tree_ptr
+  interaction_tree::do_transform(
+    const transformation_frames& frames,
+    const util::point_t<units::length_t> initial_position,
+    const units::time_t initial_time,
+    const units::depth_t traversed_mass
+  ) const
+  {
+    // * helpers
+
+    using namespace units::literals;
+    const auto atm = models::atmosphere::us_standard();
+    const auto conex_observer = util::frame::conex_observer;
+    const auto earth_radius = util::constants::earth_radius;
+    const auto earth_center = util::point_t<units::length_t>(0_m, 0_m, -earth_radius, conex_observer);
+    const auto observation_level = (
+      util::point_t<units::length_t>(0_m, 0_m, 0_m, frames.observer_new) -
+      util::point_t<units::length_t>(0_m, 0_m, 0_m, util::frame::conex_observer)
+    ).norm();
+
+    // * redefine projectile momentum
+
+    // read original momentum in the old shower frame
+    const auto old_projectile = get_interaction()->get_projectile();
+    const auto old_momentum = old_projectile->get_momentum().on_frame(frames.shower_old);
+
+    // define new momentum on the new shower frame
+    auto new_momentum = util::vector_t<units::momentum_t>(
+      old_momentum.x(),
+      old_momentum.y(),
+      old_momentum.z(),
+      frames.shower_new
+    );
+
+    // * move particle from initial position & compute final time
+
+    const auto final_position = atm
+      .transport(initial_position, new_momentum, traversed_mass)
+      .on_frame(util::frame::conex_observer);
+
+    const auto displacement = (initial_position - final_position).norm();
+    const auto velocity = old_projectile->get_velocity().norm();
+    const auto final_time = initial_time + displacement/velocity;
+
+    // * compute particle frame at the final position
+
+    // new particle height (above sea level!)
+    const auto new_height = atm.get_height(final_position);
+
+    // spherical coordinates of final position with origin at the earth center
+    const auto rad = new_height + earth_radius;
+    const auto rxy = util::math::hypot(final_position.y(), final_position.x());
+    const auto phi = util::math::atan2(final_position.y(), final_position.x());
+    const auto tea = util::math::asin(rxy/rad);
+
+    // define the new particle frame, as in CONEX
+    const auto particle_frame_rot = (util::axis::x, 1_pi-tea)*(util::axis::z, phi-0.5_pi);
+    const auto new_particle_frame = util::frame::create(particle_frame_rot, final_position, util::frame::conex_observer);
+
+    const auto ax1 = util::vector_d(0, 0, 1, get_projectile()->get_frame());
+    const auto ax2 = util::vector_d(0, 0, 1, new_particle_frame);
+
+    // * compute new slant distance to impact and new slant depth
+
+    const auto new_shower_axis = util::vector_d(0, 0, -1, frames.shower_new);
+    const auto new_slant_distance = -final_position.on_frame(frames.shower_new).z();
+    const auto new_slant_depth = atm.get_slant_depth(new_shower_axis, new_slant_distance, observation_level);
+
+    // * compute new euler angles (sines and cosines) for the lab frame
+
+    const auto p = new_momentum.on_frame(new_particle_frame);
+
+    const auto new_phi_lab = util::math::atan2(p.x(), p.y()); // x, y swapped (see sbrt CXDEFROT)
+    const auto new_c0xs = util::math::cos(new_phi_lab);
+    const auto new_s0xs = util::math::sin(new_phi_lab);
+    const auto new_c0s = p.z()/p.norm();
+    const auto new_s0s = util::math::sqrt((1 + new_c0s)*(1 - new_c0s));
+
+    // * redefine the interaction, projectile, and particles data
+
+    // create a new interaction
+    const auto new_interaction = std::make_shared<interaction>(get_interaction()->data());
+
+    // set the projectile
+    new_interaction->set_projectile({
+      // the particle momentum defined on the particle frame
+      .Px = new_momentum.on_frame(new_particle_frame).x(),
+      .Py = new_momentum.on_frame(new_particle_frame).y(),
+      .Pz = new_momentum.on_frame(new_particle_frame).z(),
+      // energy and mass are unchanged
+      .Energy = old_projectile->get_energy(),
+      .mass   = old_projectile->get_mass(),
+      // the horizontal cartesian coordinates on the conex observer frame
+      .x = final_position.on_frame(util::frame::conex_observer).x(),
+      .y = final_position.on_frame(util::frame::conex_observer).y(),
+      // height is always measured above sea level, independent of the observation level
+      .height = new_height,
+      // accumulated time in meters (actually t*c)
+      .time = final_time * 1_c,
+      // weight, id, and generation are unchanged
+      .id         = double(old_projectile->get_id()),
+      .weight     = old_projectile->get_weight(),
+      .generation = double(old_projectile->get_generation()),
+      // slant depth computed along shower axis
+      .slantTraversed = new_slant_depth,
+      // x, y coordinates in the new shower frame
+      .xShower = final_position.on_frame(frames.shower_new).x(),
+      .yShower = final_position.on_frame(frames.shower_new).y(),
+      // slant distance to impact is -z coordinate in the shower frame
+      .slantToImpact = new_slant_distance,
+      // unique id and interaction couter are unchanged
+      .uniqueParticleId   = double(old_projectile->get_unique_id()),
+      .interactionCounter = old_projectile->get_interaction_counter(),
+      // rotations specifying the interaction (lab) frame
+      .c0s  = new_c0s,
+      .c0xs = new_c0xs,
+      .s0s  = new_s0s,
+      .s0xs = new_s0xs,
+    });
+
+    // add the secondary particles to the new interaction
+    for (const auto& secondary_particle : *get_interaction()) {
+      new_interaction->add_particle(secondary_particle->data())->get_momentum();
+    }
+
+    // * create a new tree node using the new interaction
+
+    // create empty tree
+    const auto new_tree = interaction_tree_ptr(new interaction_tree);
+
+    // copy tree properties
+    new_tree->m_energy_threshold = m_energy_threshold;
+    new_tree->m_lost_energy = m_lost_energy;
+    new_tree->m_generation = m_generation;
+
+    // set interaction data
+    new_tree->m_interaction = new_interaction;
+
+    // set final products (find by matching indices)
+    const auto is_final = [&](const auto ptc) {
+      for (const auto& p : get_final_products()) {
+        if (p->get_unique_id() == ptc->get_unique_id()) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    for (const auto& ptc : *new_interaction) {
+      if (is_final(ptc)) {
+        new_tree->m_products.push_back(ptc);
+      }
+    }
+
+    // apply transformation to secondary interactions and connect them to the new tree
+    for (const auto& old_subtree : get_secondary_interactions()) {
+
+      // get mass traversed between this interaction and the next (as computed in CONEX)
+      const auto dz = atm.get_traversed_mass(
+        old_projectile->get_position(),
+        old_subtree->get_interaction()->get_projectile()->get_position()
+      );
+
+      // create a new subtree by transforming the old subtree
+      const auto new_subtree = old_subtree->do_transform(frames, final_position, final_time, dz);
+
+      // connect the new subtree to the new tree
+      new_subtree->m_precursor_interaction = new_tree;
+      new_tree->m_secondary_interactions.push_back(new_subtree);
+    }
+
+    return new_tree;
+  }
+
 }

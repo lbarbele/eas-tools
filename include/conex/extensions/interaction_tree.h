@@ -1,15 +1,22 @@
 #ifndef _conex_extensions_interaction_tree_h
 #define _conex_extensions_interaction_tree_h
 
+#include <iomanip>
 #include <iostream>
 #include <list>
-#include <vector>
+#include <map>
 #include <memory>
+#include <vector>
 
 #include <conex/extensions/event.h>
 #include <conex/extensions/interaction.h>
 #include <conex/extensions/particle.h>
 #include <conex/extensions/projectile.h>
+
+#include <models/atmosphere.h>
+
+#include <util/vector.h>
+#include <util/point.h>
 
 namespace conex::extensions {
 
@@ -29,9 +36,31 @@ namespace conex::extensions {
 
     interaction_tree() {}
 
+    struct transformation_frames {
+      util::frame_ptr shower_old = nullptr;
+      util::frame_ptr shower_new = nullptr;
+      util::frame_ptr observer_new = nullptr;
+    };
+
+    interaction_tree_ptr
+    do_transform(
+      const transformation_frames& frames,
+      const util::point_t<units::length_t> initial_position,
+      const units::time_t initial_time,
+      const units::depth_t traversed_mass
+    ) const;
+
   public:
 
-    // - Static creators
+    // - Transformation
+
+    interaction_tree_ptr
+    transform(
+      const units::angle_t new_zenith,
+      const units::length_t new_observation_level
+    ) const;
+
+    // - Static factory methods
 
     static interaction_tree_ptr create(
       const event& evt,
@@ -51,6 +80,9 @@ namespace conex::extensions {
 
     const interaction_ptr& get_interaction() const
     {return m_interaction;}
+
+    const projectile_ptr& get_projectile() const
+    {return get_interaction()->get_projectile();}
 
     const std::vector<particle_ptr>& get_final_products() const
     {return m_products;}
