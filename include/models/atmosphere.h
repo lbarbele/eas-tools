@@ -288,35 +288,32 @@ namespace models::atmosphere {
       }
     }
 
-    // * compute slant depth along axis
+    // * compute slant depth along z axis
 
     template <util::concepts::scalar U>
     units::depth_t
     get_slant_depth(
       const util::vector_t<U>& input_axis,
-      const units::length_t distance
+      const units::length_t distance,
+      const units::length_t ground_level = 0_m
     ) const
     {
       // the integration axis and its sine/cosine directions
-      const auto axis = input_axis.get_normalized(1.);
+      const auto axis = input_axis.on_frame(util::frame::standard).get_normalized(1.);
       const auto cosa = axis.z();
-      const auto sina = util::math::hypot(axis.x(), axis.y());
+      const auto sina = util::math::sqrt((1+cosa)*(1-cosa));
 
-      // the linear layer
-      const auto l = m_layers.back();
-
-      // the distance from ground to atmosphere boundary along the axis
-      const auto rear = util::constants::earth_radius;
-      // const auto rmax = rear + max_height();
-      const auto rmax = rear + l.min_height;
-      const auto dmax = util::math::sqrt((rmax+rear*sina)*(rmax-rear*sina)) - rear*cosa;
+      // the distance from ground to atmosphere boundary along the given axis
+      const auto rmax = util::constants::earth_radius + max_height();
+      const auto rgnd = util::constants::earth_radius + ground_level;
+      const auto dmax = util::math::sqrt((rmax+rgnd*sina)*(rmax-rgnd*sina)) - rgnd*cosa;
 
       // initial and final positions for integration
-      const auto grnd = util::point_t<units::length_t>(0_m, 0_m, 0_m, util::frame::standard);
+      const auto grnd = util::point_t<units::length_t>(0_m, 0_m, ground_level, util::frame::standard);
       const auto pini = grnd + axis*dmax;
       const auto pend = grnd + axis*distance;
 
-      return l.max_depth + get_traversed_mass(pini, pend);
+      return get_traversed_mass(pini, pend);
     }
 
     // * compute traversed length in given direction
