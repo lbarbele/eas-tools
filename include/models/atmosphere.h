@@ -87,12 +87,29 @@ namespace models::atmosphere {
         const auto xu = idlay == ib ? xb : util::math::sqrt((ru+y)*(ru-y));
 
         if (l.shape == layer::linear) {
+          // linear evolution
           traversed_mass += (xu - xl)*(l.b/l.c);
+        } else if ((xu - xl)/l.c < 1e-7) {
+          // exponential layer, but small displacement: linear evolution
+          // the next term is proportional to ((xu-xl)/c)^2
+          // so the error in this approximation is < ((xu-xl)/c)^2
+          const auto xm = 0.5*(xl + xu); // middle point
+          const auto hm = util::math::hypot(xm, y) - rea; // height at the middle point
+          traversed_mass = get_density(hm) * (xu - xl); // linear approximation
         } else {
           const auto lower = util::math::exp(-height(xu)/l.c);
           const auto upper = util::math::exp(-height(xl)/l.c);
 
-          traversed_mass += l.b * util::math::romberg_integral(lower, upper, 1e-8, integrand, l.c);
+          try {
+            traversed_mass += l.b * util::math::romberg_integral(lower, upper, 1e-8, integrand, l.c);
+          } catch (...) {
+            std::cerr << "failed to compute traversed mass" << std::endl;
+            std::cerr << "layer id: " << idlay << std::endl;
+            std::cerr << "xl:       " << xl << std::endl;
+            std::cerr << "xu:       " << xu << std::endl;
+            std::cerr << "y:        " << y << std::endl;
+            throw std::runtime_error("this is a wrapped exception");
+          }
         }
       }
 
