@@ -244,11 +244,15 @@ namespace conex::extensions {
     // the new initial position is the intercept between shower axis and atmosphere boundary
     const auto new_initial_position = util::point_t<units::length_t>(0_m, 0_m, -new_max_distance, frames.shower_new);
 
+    // * define the new time frame
+
+    const auto new_initial_time = -new_max_distance/1_c;
+
     // * apply transformation
 
     const auto traversed_mass = old_projectile->get_slant_depth();
 
-    return do_transform(frames, new_initial_position, 0_s, traversed_mass);
+    return do_transform(frames, new_initial_position, new_initial_time, traversed_mass);
   }
 
   interaction_tree_ptr
@@ -291,7 +295,7 @@ namespace conex::extensions {
       .transport(initial_position, new_momentum, traversed_mass)
       .on_frame(util::frame::conex_observer);
 
-    const auto displacement = (initial_position - final_position).norm();
+    const auto displacement = (final_position - initial_position).norm();
     const auto velocity = old_projectile->get_velocity().norm();
     const auto final_time = initial_time + displacement/velocity;
 
