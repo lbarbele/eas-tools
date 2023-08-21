@@ -129,7 +129,11 @@ namespace models::atmosphere {
         }
       }
 
-      throw std::runtime_error("unable to find atmosphere layer from id");
+      std::cerr
+        << "unable to find atmosphere layer from id" << std::endl
+        << "id was " << id << std::endl;
+
+      throw std::runtime_error("atmosphere error");
     }
 
     const layer&
@@ -147,7 +151,11 @@ namespace models::atmosphere {
         }
       }
 
-      throw std::runtime_error("unable to find atmosphere layer from height");
+      std::cerr
+        << "unable to find atmosphere layer from height" << std::endl
+        << "height was " << height.convert<units::meter>() << std::endl;
+
+      throw std::runtime_error("atmosphere error");
     }
 
     const layer&
@@ -165,7 +173,11 @@ namespace models::atmosphere {
         }
       }
 
-      throw std::runtime_error("unable to find atmosphere layer from depth");
+      std::cerr
+        << "unable to find atmosphere layer from depth" << std::endl
+        << "depth was " << depth/1_gcm2 << " g/cm²" << std::endl;
+
+      throw std::runtime_error("atmosphere error");
     }
 
     const layer& get_layer(const util::point_t<units::length_t>& position) const
@@ -364,7 +376,16 @@ namespace models::atmosphere {
         } else {
           // case 2: non-horizontal displacement
           const auto initial_depth = get_depth(position);
-          const auto final_depth = util::math::max(initial_depth - dX*cosine, min_depth());
+          auto final_depth = initial_depth - dX*cosine;
+
+          // force to never leave the atmosphere
+          if (final_depth < min_depth()) {
+            final_depth = min_depth();
+          } 
+
+          if (final_depth > max_depth()) {
+            final_depth = max_depth() - 1e-2_gcm2;
+          }
 
           const auto initial_height = get_height(position);
           const auto final_height = get_height(final_depth);
