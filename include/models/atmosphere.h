@@ -371,7 +371,7 @@ namespace models::atmosphere {
       const auto rea = util::constants::earth_radius;
       const auto earth_center = util::point_t<units::length_t>(0_m, 0_m, -rea, util::frame::standard);
 
-      // atmoisphere  limits considering the given ground level
+      // atmosphere limits considering the given ground level
       const auto hmin = ground_level;
       const auto hmax = max_height();
 
@@ -385,11 +385,20 @@ namespace models::atmosphere {
       for (uint iter = 0; iter < 100; ++iter) {
         const auto cosine = util::cos_angle(position - earth_center, direction);
 
+        // don't use negative dz, change direction sign instead
+        if (dz < 0_gcm2) {
+          dz = -dz;
+          direction = -direction;
+        }
+
         // * compute approximation to displacement corresponding to dz
 
         units::length_t displacement = 0_m;
 
-        if (util::math::abs(cosine) < 1e-2) {
+        if (dz < 1e-5_gcm2) {
+          // case 0: small displacements, use linear approximation
+          displacement = dz/get_density(position);
+        } else if (util::math::abs(cosine) < 1e-2) {
           // case 1: (almost) horizontal displacement
           displacement = dz/get_density(position);
         } else {
@@ -426,11 +435,6 @@ namespace models::atmosphere {
         // update depth
         dz -= get_traversed_mass(position, previous_position);
 
-        // never use negative dz, change direction sign instead
-        if (dz < 0_gcm2) {
-          dz = -dz;
-          direction = -direction;
-        }
       }
 
       throw std::runtime_error("atm transport was unable to reach the desired precision");
