@@ -365,7 +365,7 @@ namespace models::atmosphere {
       const util::vector_t<U>& input_direction,
       const units::depth_t& depth_interval,
       const units::length_t ground_level = 0_m,
-      const units::length_t tolerance = 1_nm
+      const units::length_t tolerance = 5_nm
     ) const
     {
       const auto rea = util::constants::earth_radius;
