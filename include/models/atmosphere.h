@@ -300,7 +300,7 @@ namespace models::atmosphere {
       const auto ra = a - cnt;
       const auto rb = b - cnt;
 
-      if (ra.norm()-rea < 0_m || rb.norm() < 0_m) {
+      if (ra.norm()-rea < -1_nm || rb.norm()-rea < -1_nm) {
         std::cerr
           << "error: tried to compute traversed mass for a point below ground level\n"
           << "ha: " << ra.norm() - rea << '\n'
@@ -386,11 +386,15 @@ namespace models::atmosphere {
           displacement = dX/get_density(position);
         } else {
           // case 2: non-horizontal displacement
-          const auto initial_depth = get_depth(position);
-          const auto final_depth = initial_depth - dX*cosine;
+          const auto final_depth = get_depth(position) - dX*cosine;
 
           const auto initial_height = get_height(position);
-          const auto final_height = get_height(std::max(min_depth(), std::min(final_depth, max_depth())));
+
+          const auto final_height =
+            final_depth <= min_depth() ? max_height() :
+            final_depth >= max_depth() ? min_height() :
+            get_height(final_depth);
+
           displacement = (final_height - initial_height) / cosine;
         }
 
@@ -405,13 +409,23 @@ namespace models::atmosphere {
           return position;
         }
 
-        // update depth 
+        // update depth
         dX -= get_traversed_mass(position, previous_position);
 
+        // never use negative dX, change direction sign instead
         if (dX < 0_gcm2) {
           dX = -dX;
           direction = -direction;
         }
+
+        // it may happen, due to a precision, problem, that the height here is negative,
+        // but with negligible absolute value. this may happen when truncating final_height
+        // above in the "non-horizontal" displacement case. if that happens because the
+        // particle has hit the ground (direction is still downwards) transport is complete,
+        // because a particle cannot be transported underground
+        if (get_height(position) < 1_nm && util::cos_angle(position - earth_center, direction) < 0) {
+          return position;
+        } 
       }
 
       throw std::runtime_error("atm transport was unable to reach the desired precision");
