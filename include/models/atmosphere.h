@@ -376,19 +376,10 @@ namespace models::atmosphere {
         } else {
           // case 2: non-horizontal displacement
           const auto initial_depth = get_depth(position);
-          auto final_depth = initial_depth - dX*cosine;
-
-          // force to never leave the atmosphere
-          if (final_depth < min_depth()) {
-            final_depth = min_depth();
-          } 
-
-          if (final_depth > max_depth()) {
-            final_depth = max_depth() - 1e-2_gcm2;
-          }
+          const auto final_depth = initial_depth - dX*cosine;
 
           const auto initial_height = get_height(position);
-          const auto final_height = get_height(final_depth);
+          const auto final_height = get_height(std::max(min_depth(), std::min(final_depth, max_depth())));
           displacement = (final_height - initial_height) / cosine;
         }
 
