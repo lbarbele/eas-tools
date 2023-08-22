@@ -60,8 +60,10 @@ namespace models::atmosphere {
     {
       const auto rea = util::constants::earth_radius;
 
+      // we assume here the path mapped by xa and xb is never passing below ground!
+      // this condition must (and, in fact, it is) ensured in get_traversed_mass()
       const auto height = [=](const auto x){
-        return util::math::hypot(x, y) - rea;
+        return util::math::max(util::math::hypot(x, y) - rea, 0_m);
       };
 
       // the returning value
@@ -298,6 +300,16 @@ namespace models::atmosphere {
       const auto ra = a - cnt;
       const auto rb = b - cnt;
 
+      if (ra.norm() < rea || rb.norm() < rea) {
+        std::cerr
+          << "error: tried to compute traversed mass for a point below ground level\n"
+          << "ra: " << ra.norm() << '\n'
+          << "rb: " << rb.norm() << '\n'
+          << "rea: " << rea << '\n';
+    
+        throw std::runtime_error("atmosphere: get_traversed_mass error");
+      }
+
       // impact radius
       const auto y = dir.cross_product(ra).norm();
 
@@ -394,7 +406,7 @@ namespace models::atmosphere {
           return position;
         }
 
-        // update depth interval
+        // update depth 
         dX -= get_traversed_mass(position, previous_position);
 
         if (dX < 0_gcm2) {
