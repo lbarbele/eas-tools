@@ -364,35 +364,43 @@ namespace models::atmosphere {
       const util::point_t<units::length_t>& initial_position,
       const util::vector_t<U>& input_direction,
       const units::depth_t& depth_interval,
+      const units::length_t ground_level = 0_m,
       const units::length_t tolerance = 1_nm
     ) const
     {
       const auto rea = util::constants::earth_radius;
       const auto earth_center = util::point_t<units::length_t>(0_m, 0_m, -rea, util::frame::standard);
 
+      // atmoisphere  limits considering the given ground level
+      const auto hmin = ground_level;
+      const auto hmax = max_height();
+
+      const auto zmin = min_depth();
+      const auto zmax = get_depth(hmin);
+
       auto direction = input_direction.get_normalized(1.);
       auto position = initial_position;
-      auto dX = depth_interval;
+      auto dz = depth_interval;
 
       for (uint iter = 0; iter < 100; ++iter) {
         const auto cosine = util::cos_angle(position - earth_center, direction);
 
-        // * compute approximation to displacement corresponding to dX
+        // * compute approximation to displacement corresponding to dz
 
         units::length_t displacement = 0_m;
 
         if (util::math::abs(cosine) < 1e-2) {
           // case 1: (almost) horizontal displacement
-          displacement = dX/get_density(position);
+          displacement = dz/get_density(position);
         } else {
           // case 2: non-horizontal displacement
-          const auto final_depth = get_depth(position) - dX*cosine;
+          const auto final_depth = get_depth(position) - dz*cosine;
 
           const auto initial_height = get_height(position);
 
           const auto final_height =
-            final_depth <= min_depth() ? max_height() :
-            final_depth >= max_depth() ? min_height() :
+            final_depth <= zmin ? hmax :
+            final_depth >= zmax ? hmin :
             get_height(final_depth);
 
           displacement = (final_height - initial_height) / cosine;
@@ -404,28 +412,25 @@ namespace models::atmosphere {
         const auto previous_position = position;
         position += displacement*direction;
 
+        // don't allow heights below the ground level
+        // (may happen due to floating point (im)precision)
+        while (get_height(position) < ground_level) {
+          position -= tolerance*direction;
+        }
+
         // if displacement is smaller than tolerance, we are done
         if (util::math::abs(displacement) < tolerance) {
           return position;
         }
 
         // update depth
-        dX -= get_traversed_mass(position, previous_position);
+        dz -= get_traversed_mass(position, previous_position);
 
-        // never use negative dX, change direction sign instead
-        if (dX < 0_gcm2) {
-          dX = -dX;
+        // never use negative dz, change direction sign instead
+        if (dz < 0_gcm2) {
+          dz = -dz;
           direction = -direction;
         }
-
-        // it may happen, due to a precision, problem, that the height here is negative,
-        // but with negligible absolute value. this may happen when truncating final_height
-        // above in the "non-horizontal" displacement case. if that happens because the
-        // particle has hit the ground (direction is still downwards) transport is complete,
-        // because a particle cannot be transported underground
-        if (get_height(position) < 1_nm && util::cos_angle(position - earth_center, direction) < 0) {
-          return position;
-        } 
       }
 
       throw std::runtime_error("atm transport was unable to reach the desired precision");

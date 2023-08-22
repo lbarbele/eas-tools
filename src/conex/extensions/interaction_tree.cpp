@@ -278,7 +278,7 @@ namespace conex::extensions {
     // * redefine projectile momentum
 
     // read original momentum in the old shower frame
-    const auto old_projectile = get_interaction()->get_projectile();
+    const auto old_projectile = get_projectile();
     const auto old_momentum = old_projectile->get_momentum().on_frame(frames.shower_old);
 
     // define new momentum on the new shower frame
@@ -289,20 +289,24 @@ namespace conex::extensions {
       frames.shower_new
     );
 
-    // * move particle from initial position & compute final time
+    // * move particle from initial position
 
     const auto final_position = atm
-      .transport(initial_position, new_momentum, traversed_mass)
+      .transport(initial_position, new_momentum, traversed_mass, observation_level)
       .on_frame(util::frame::conex_observer);
 
+    // new particle height (above sea level!)
+    const auto new_height = atm.get_height(final_position);
+
+    // flag indicating the projectile has hit the ground
+    const bool particle_hits_ground = new_height - observation_level < 1_nm;
+
+    // new particle time
     const auto displacement = (final_position - initial_position).norm();
     const auto velocity = old_projectile->get_velocity().norm();
     const auto final_time = initial_time + displacement/velocity;
 
     // * compute particle frame at the final position
-
-    // new particle height (above sea level!)
-    const auto new_height = atm.get_height(final_position);
 
     // spherical coordinates of final position with origin at the earth center
     const auto rad = new_height + earth_radius;
@@ -333,13 +337,9 @@ namespace conex::extensions {
     const auto new_c0s = p.z()/p.norm();
     const auto new_s0s = util::math::sqrt((1 + new_c0s)*(1 - new_c0s));
 
-    // * redefine the interaction, projectile, and particles data
+    // * redefine the projectile data structure
 
-    // create a new interaction
-    const auto new_interaction = std::make_shared<interaction>(get_interaction()->data());
-
-    // set the projectile
-    new_interaction->set_projectile({
+    const auto new_projectile_data = projectile::data_t{
       // the particle momentum defined on the particle frame
       .Px = new_momentum.on_frame(new_particle_frame).x(),
       .Py = new_momentum.on_frame(new_particle_frame).y(),
@@ -373,14 +373,27 @@ namespace conex::extensions {
       .c0xs = new_c0xs,
       .s0s  = new_s0s,
       .s0xs = new_s0xs,
-    });
+    };
 
-    // add the secondary particles to the new interaction
-    for (const auto& secondary_particle : *get_interaction()) {
-      new_interaction->add_particle(secondary_particle->data())->get_momentum();
-    }
+    // * create a new interaction object, still without secondary particles
 
-    // * create a new tree node using the new interaction
+    const auto new_interaction_data = interaction::data_t{
+      .idProj             = get_interaction()->data().idProj,
+      .idTarg             = get_interaction()->data().idTarg,
+      .mult               = particle_hits_ground ? 1 : get_interaction()->data().mult,
+      .eProj              = get_interaction()->data().eProj,
+      .eCMS               = get_interaction()->data().eCMS,
+      .eProd              = get_interaction()->data().eProd,
+      .interactionCounter = get_interaction()->data().interactionCounter,
+      .seeds              = get_interaction()->data().seeds
+    };
+
+    const auto new_interaction = std::make_shared<interaction>(new_interaction_data);
+    
+    // set the projectile
+    new_interaction->set_projectile(new_projectile_data);
+
+    // * create a new tree node
 
     // create empty tree
     const auto new_tree = interaction_tree_ptr(new interaction_tree);
@@ -393,38 +406,76 @@ namespace conex::extensions {
     // set interaction data
     new_tree->m_interaction = new_interaction;
 
-    // set final products (find by matching indices)
-    const auto is_final = [&](const auto ptc) {
-      for (const auto& p : get_final_products()) {
-        if (p->get_unique_id() == ptc->get_unique_id()) {
-          return true;
+    if (particle_hits_ground) {
+    // * if projectile hits the observation level
+
+      // add the projectile as the only secondary particle emerging from the interaction
+      const auto new_sec_particle = new_interaction->add_particle({
+        .Px = units::gev_per_c_t<double>(0.),
+        .Py = units::gev_per_c_t<double>(0.),
+        .Pz = new_interaction->get_projectile()->get_momentum().norm(),
+        .Energy = new_projectile_data.Energy,
+        .mass = new_projectile_data.mass,
+        .x = 0_m,
+        .y = 0_m,
+        .z = 0_m,
+        .time = 0_s,
+        .id = new_projectile_data.id,
+        .t_formation = 0_s,
+        .t_destruction = 0_s,
+        .id_origin = 0,
+        .id_father = 0,
+        .id_mother = 0,
+        .status = 0,
+        .uniqueParticleId = new_projectile_data.uniqueParticleId,
+        .interactionCounter = new_projectile_data.interactionCounter
+      });
+
+      // the projectile is also a final product on the tree node
+      new_tree->m_products.push_back(new_sec_particle);
+
+      // note: no subtrees are added!
+
+    } else {
+    // * if projectile interacts
+
+      // add all secondary particles to the new interaction
+      for (const auto& secondary_particle : *get_interaction()) {
+        new_interaction->add_particle(secondary_particle->data());
+      }
+
+      // set final products (find by matching indices) of this interaction tree node
+      for (const auto& ptc : *new_interaction) {
+        bool is_final = false;
+
+        for (const auto& prod : get_final_products()) {
+          if (prod->get_unique_id() == ptc->get_unique_id()) {
+            is_final = true;
+            break;
+          }
+        }
+
+        if (is_final) {
+           new_tree->m_products.push_back(ptc);
         }
       }
 
-      return false;
-    };
+      // apply transformation to secondary interactions and connect them to the new tree
+      for (const auto& old_subtree : get_secondary_interactions()) {
 
-    for (const auto& ptc : *new_interaction) {
-      if (is_final(ptc)) {
-        new_tree->m_products.push_back(ptc);
+        // get mass traversed between this interaction and the next (as computed in CONEX)
+        const auto dz = atm.get_traversed_mass(
+          old_projectile->get_position(),
+          old_subtree->get_projectile()->get_position()
+        );
+
+        // create a new subtree by transforming the old subtree
+        const auto new_subtree = old_subtree->do_transform(frames, final_position, final_time, dz);
+
+        // connect the new subtree to the new tree
+        new_subtree->m_precursor_interaction = new_tree;
+        new_tree->m_secondary_interactions.push_back(new_subtree);
       }
-    }
-
-    // apply transformation to secondary interactions and connect them to the new tree
-    for (const auto& old_subtree : get_secondary_interactions()) {
-
-      // get mass traversed between this interaction and the next (as computed in CONEX)
-      const auto dz = atm.get_traversed_mass(
-        old_projectile->get_position(),
-        old_subtree->get_interaction()->get_projectile()->get_position()
-      );
-
-      // create a new subtree by transforming the old subtree
-      const auto new_subtree = old_subtree->do_transform(frames, final_position, final_time, dz);
-
-      // connect the new subtree to the new tree
-      new_subtree->m_precursor_interaction = new_tree;
-      new_tree->m_secondary_interactions.push_back(new_subtree);
     }
 
     return new_tree;
