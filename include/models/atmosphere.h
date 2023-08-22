@@ -300,12 +300,11 @@ namespace models::atmosphere {
       const auto ra = a - cnt;
       const auto rb = b - cnt;
 
-      if (ra.norm() < rea || rb.norm() < rea) {
+      if (ra.norm()-rea < 0_m || rb.norm() < 0_m) {
         std::cerr
           << "error: tried to compute traversed mass for a point below ground level\n"
-          << "ra: " << ra.norm() << '\n'
-          << "rb: " << rb.norm() << '\n'
-          << "rea: " << rea << '\n';
+          << "ha: " << ra.norm() - rea << '\n'
+          << "hb: " << rb.norm() - rea << '\n';
     
         throw std::runtime_error("atmosphere: get_traversed_mass error");
       }
